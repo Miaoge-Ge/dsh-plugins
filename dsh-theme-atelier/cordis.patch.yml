@@ -1,0 +1,4 @@
+- insert:
+    - id: theme-atelier
+      name: '@local/dsh-theme-atelier'
+      config: {}

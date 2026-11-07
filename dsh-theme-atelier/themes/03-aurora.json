@@ -1,0 +1,50 @@
+{
+  "id": "aurora",
+  "name": {
+    "zh": "极光",
+    "en": "Aurora"
+  },
+  "style": {
+    "zh": "通透 · 数字",
+    "en": "Digital calm"
+  },
+  "description": {
+    "zh": "雾蓝与鸢尾紫，柔和层次中的轻盈数字空间。",
+    "en": "Mist blue and iris. Soft layers with a clear digital character."
+  },
+  "design": "glass",
+  "radii": [
+    4,
+    10,
+    14,
+    18,
+    24,
+    32
+  ],
+  "light": {
+    "bg": "#f4f6fc",
+    "sidebar": "#e9edf7",
+    "surface": "#ffffff",
+    "raised": "#ffffff",
+    "text": "#242b46",
+    "muted": "#535e7b",
+    "accent": "#5e48b0",
+    "onAccent": "#ffffff",
+    "line": "#cdd5e9",
+    "soft": "#e6eafa",
+    "code": "#eff2fa"
+  },
+  "dark": {
+    "bg": "#141726",
+    "sidebar": "#111420",
+    "surface": "#1d2337",
+    "raised": "#272e46",
+    "text": "#e7ebfb",
+    "muted": "#b7c1df",
+    "accent": "#bfb1ff",
+    "onAccent": "#231b42",
+    "line": "#3c4664",
+    "soft": "#303754",
+    "code": "#191e30"
+  }
+}

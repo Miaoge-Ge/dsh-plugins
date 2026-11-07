@@ -1,0 +1,50 @@
+{
+  "id": "obsidian",
+  "name": {
+    "zh": "曜石",
+    "en": "Obsidian"
+  },
+  "style": {
+    "zh": "静奢 · 精密",
+    "en": "Quiet luxury"
+  },
+  "description": {
+    "zh": "冷灰与香槟金，留白有序，让注意力回到内容。",
+    "en": "Graphite, champagne and measured space. A quieter place to think."
+  },
+  "design": "minimal",
+  "radii": [
+    3,
+    6,
+    10,
+    14,
+    18,
+    24
+  ],
+  "light": {
+    "bg": "#faf9f6",
+    "sidebar": "#f0efeb",
+    "surface": "#ffffff",
+    "raised": "#ffffff",
+    "text": "#20242b",
+    "muted": "#575c65",
+    "accent": "#75572d",
+    "onAccent": "#ffffff",
+    "line": "#d9d8d2",
+    "soft": "#eeebe4",
+    "code": "#f1f0ec"
+  },
+  "dark": {
+    "bg": "#13161c",
+    "sidebar": "#101319",
+    "surface": "#1b2028",
+    "raised": "#242a34",
+    "text": "#eae8e2",
+    "muted": "#b1b7c2",
+    "accent": "#dec79b",
+    "onAccent": "#24201a",
+    "line": "#363e4a",
+    "soft": "#2b3039",
+    "code": "#171b22"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@local/dsh-code-mode-preset",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Code 模式：直接实施、控制改动范围并运行项目检查的 DeepSeek Harness 编码预设",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Miaoge-Ge/dsh-plugins.git",
+    "directory": "dsh-code-mode-preset"
+  },
+  "homepage": "https://github.com/Miaoge-Ge/dsh-plugins/tree/main/dsh-code-mode-preset#readme",
+  "bugs": {
+    "url": "https://github.com/Miaoge-Ge/dsh-plugins/issues"
+  },
+  "files": [
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}

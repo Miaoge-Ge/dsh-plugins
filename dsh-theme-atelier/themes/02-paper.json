@@ -1,0 +1,50 @@
+{
+  "id": "paper",
+  "name": {
+    "zh": "纸间",
+    "en": "Paper"
+  },
+  "style": {
+    "zh": "编辑 · 人文",
+    "en": "Editorial"
+  },
+  "description": {
+    "zh": "暖纸色、墨色与衬线标题，像翻开一本精心编排的书。",
+    "en": "Warm paper, ink and serif headings. The rhythm of a well-made book."
+  },
+  "design": "editorial",
+  "radii": [
+    2,
+    3,
+    5,
+    6,
+    8,
+    12
+  ],
+  "light": {
+    "bg": "#f6f1e7",
+    "sidebar": "#eee7d9",
+    "surface": "#fcf8f0",
+    "raised": "#fffcf6",
+    "text": "#302b26",
+    "muted": "#625749",
+    "accent": "#8b422c",
+    "onAccent": "#ffffff",
+    "line": "#d7cbbb",
+    "soft": "#e9dfd0",
+    "code": "#f0e8db"
+  },
+  "dark": {
+    "bg": "#211e1a",
+    "sidebar": "#1b1916",
+    "surface": "#29251f",
+    "raised": "#332d26",
+    "text": "#f0e7d9",
+    "muted": "#c3b5a1",
+    "accent": "#e4b48e",
+    "onAccent": "#2a1b12",
+    "line": "#4b4135",
+    "soft": "#393027",
+    "code": "#24201b"
+  }
+}

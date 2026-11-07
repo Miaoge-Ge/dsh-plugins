@@ -1,0 +1,85 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+import { themes } from '../catalog.js';
+import { compileTheme, validateTheme, contrast, mountLayer } from '../src/tokens.mjs';
+
+test('all palettes keep text, secondary text, links and buttons readable', () => {
+  assert.equal(new Set(themes.map(t => t.id)).size, themes.length);
+  for (const theme of themes) for (const mode of ['light', 'dark']) {
+    const p = theme[mode];
+    for (const bg of ['bg', 'sidebar', 'surface', 'raised', 'soft', 'code']) for (const fg of ['text', 'muted', 'accent']) {
+      assert.ok(contrast(p[fg], p[bg]) >= 4.5, `${theme.id}/${mode}: ${fg} on ${bg}`);
+    }
+    assert.ok(contrast(p.accent, p.onAccent) >= 4.5);
+  }
+});
+
+test('every override has both modes, and inherited semantics stay native', () => {
+  for (const theme of themes) {
+    const tokens = compileTheme(theme);
+    assert.ok(Object.keys(tokens).length > 70);
+    for (const [key, pair] of Object.entries(tokens)) {
+      assert.match(key, /^--dsw-/);
+      assert.equal(typeof pair.light, 'string'); assert.equal(typeof pair.dark, 'string');
+    }
+    for (const suffix of ['alias-state-error-primary', 'alias-state-success-primary', 'alias-code-diff-added', 'font-family']) assert.equal(tokens[`--dsw-${suffix}`], undefined);
+    assert.equal(tokens['--dsh-content-font-size'], undefined);
+    assert.equal(compileTheme(theme, false)['--dsw-radius-md'], undefined);
+    assert.equal(compileTheme(theme, false)['--dsw-font-markdown-h1-font-family'], undefined);
+  }
+});
+
+test('invalid extension data fails at build boundary', () => {
+  for (const patch of [{id:'native'}, {id:'../../bad'}, {radii:[1]}, {design:'unknown'}, {light:{...themes[0].light, bg:'url(https://example.com)'}}]) {
+    assert.throws(() => validateTheme({...themes[0], ...patch}));
+  }
+});
+
+test('settings adoption replaces only the owned layer; native reset and disposal clean up', () => {
+  let state = {status:'loading'}, listener, calls = 0;
+  const layers = new Map([['another-plugin', {sentinel:true}]]);
+  const theme = {overrideTokens(source, tokens) {
+    const current = {tokens}; layers.set(source, current); calls++;
+    return () => { if (layers.get(source) === current) layers.delete(source); };
+  }};
+  const form = {getSnapshot:() => state, subscribe(fn) {listener = fn; return () => {listener = undefined;};}};
+  const stop = mountLayer(theme, form, themes);
+  assert.equal(calls, 0);
+  state = {status:'ready', value:{theme:'obsidian', signature:true}}; listener();
+  assert.equal(calls, 1); listener(); assert.equal(calls, 1);
+  state = {...state, value:{theme:'paper', signature:false}}; listener();
+  assert.equal(calls, 2); assert.equal(layers.size, 2);
+  assert.equal(layers.get('@local/dsh-theme-atelier').tokens['--dsw-radius-md'], undefined);
+  state = {...state, value:{theme:'native'}}; listener(); assert.equal(layers.size, 1);
+  state = {...state, value:{theme:'terminal'}}; listener(); assert.equal(layers.size, 2);
+  stop(); stop(); assert.equal(layers.size, 1); assert.equal(listener, undefined);
+  assert.deepEqual(layers.get('another-plugin'), {sentinel:true});
+});
+
+test('client factory is side-effect free, uses host React, and declares required services', async () => {
+  let descriptor;
+  const source = await readFile(new URL('../client.js', import.meta.url), 'utf8');
+  vm.runInNewContext(source, {window:{__ModuleLoader__:{load(d){descriptor = d;}}}});
+  assert.equal(descriptor.id, '@local/dsh-theme-atelier');
+  const imports = [];
+  const client = descriptor.factory(name => { imports.push(name); return {createElement(){}}; });
+  assert.deepEqual(imports, ['react']);
+  assert.deepEqual(Array.from(client.inject), ['slots', 'theme', 'configForms', 'locale']);
+  assert.equal(typeof client.apply, 'function');
+});
+
+test('metadata, translated UI and distributable entry points are complete', async () => {
+  const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+  const zh = JSON.parse(await read('locale/zh.json')), en = JSON.parse(await read('locale/en.json'));
+  assert.deepEqual(Object.keys(zh.ui).sort(), Object.keys(en.ui).sort());
+  for (const locale of [zh,en]) {assert.ok(locale.meta.title); assert.ok(locale.meta.description);}
+  const manifest = JSON.parse(await read('package.json'));
+  assert.equal(manifest.dsh.client.platform, 'web');
+  for (const key of ['.', './client', './icon']) assert.ok((await read(manifest.exports[key])).length);
+  const css = await read('src/style.css');
+  assert.ok(css.includes('prefers-reduced-motion')); assert.ok(css.includes('forced-colors'));
+  assert.ok(!css.includes('!important') || css.includes('prefers-reduced-motion'));
+  assert.ok(!/https?:|@import|url\(/.test(css));
+});

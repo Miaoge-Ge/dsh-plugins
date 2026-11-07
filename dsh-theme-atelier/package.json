@@ -1,0 +1,63 @@
+{
+  "name": "@local/dsh-theme-atelier",
+  "version": "0.0.1",
+  "description": "Theme atelier for DeepSeek Harness — six design systems, twelve palettes, native settings and reversible token layers.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "catalog.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale",
+    "themes",
+    "src",
+    "scripts",
+    "test",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node scripts/build.mjs && node --check client.js && node --check index.js && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.19.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-theme",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-settings-general",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Miaoge-Ge/dsh-plugins.git",
+    "directory": "dsh-theme-atelier"
+  },
+  "homepage": "https://github.com/Miaoge-Ge/dsh-plugins/tree/main/dsh-theme-atelier#readme",
+  "bugs": {
+    "url": "https://github.com/Miaoge-Ge/dsh-plugins/issues"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "id": "bauhaus",
+  "name": {
+    "zh": "构成",
+    "en": "Bauhaus"
+  },
+  "style": {
+    "zh": "几何 · 现代",
+    "en": "Geometric modern"
+  },
+  "description": {
+    "zh": "清晰直角、克制的红与高对比，让每个信息都有位置。",
+    "en": "Strong geometry, restrained red and a precise visual hierarchy."
+  },
+  "design": "geometric",
+  "radii": [
+    0,
+    2,
+    3,
+    4,
+    6,
+    8
+  ],
+  "light": {
+    "bg": "#f7f7f3",
+    "sidebar": "#ecece5",
+    "surface": "#ffffff",
+    "raised": "#ffffff",
+    "text": "#202422",
+    "muted": "#565b57",
+    "accent": "#a62e2e",
+    "onAccent": "#ffffff",
+    "line": "#cbcec7",
+    "soft": "#e6e8e0",
+    "code": "#f0f1eb"
+  },
+  "dark": {
+    "bg": "#191b1b",
+    "sidebar": "#121514",
+    "surface": "#222725",
+    "raised": "#2b312e",
+    "text": "#f1f0e7",
+    "muted": "#bfc6bf",
+    "accent": "#ffa39b",
+    "onAccent": "#401a17",
+    "line": "#474d47",
+    "soft": "#333a35",
+    "code": "#1d2320"
+  }
+}
