@@ -17,6 +17,7 @@ dsh plugin --profile desktop add "C:\path\dsh-plugins\dsh-code-mode-preset"
 - **持久终端**：`terminal_open`、`terminal_send`、`terminal_read`、`terminal_signal`、`terminal_close`、`terminal_list`，Windows 使用 pwsh、POSIX 使用 bash，适合 REPL、交互式调试器和后台 dev server；收尾时关闭自己开的会话。
 - **先读后写保护**：`edit` 需要本会话先读过，`write` 不能覆盖没读过的文件，基于过期读取的写入会被拒绝（`FS_NOT_OBSERVED` / `FS_STALE_VERSION`），而不是覆盖别人刚改的内容。保护覆盖 `read`、`write`、`edit` 三个文件系统工具；本预设不挂载删除工具。
 - **计划模式**：仍然挂载但默认关闭，需要时可以切换。
+- **技能**：挂载 `skill-filesystem` 与 `tool-skill`，自动发现项目 `.dsh/skills`、`.agents/skills` 以及用户 `~/.dsh/skills`、`~/.agents/skills`。用户级或项目级技能无需修改预设即可在 Code 模式会话中使用；这些技能由环境提供，不由本预设打包。
 
 ## 先读后写保护的作用范围
 

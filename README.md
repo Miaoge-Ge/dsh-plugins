@@ -43,6 +43,27 @@ npm.cmd run pack:plugins  # 在 dist/ 生成三个安装包
 
 `client.js`、`catalog.js` 是构建产物，修改对应 `src/` 后重新构建。修改后需重新加载 Harness。仓库的 `private: true` 仅防止误发布到 npm；GitHub 仓库是公开的。
 
+## 可选技能（Agent Skills）
+
+`skills/` 收录了从 [anthropics/skills](https://github.com/anthropics/skills) 适配并本地化的技能；它们不随插件包安装，由 DSH 的技能目录提供：
+
+- `frontend-design`：前端视觉方向、字体与版式指导。
+- `mcp-builder`：构建 Python / Node MCP 服务器，并附通过 DSH Cordis bundle 接入的说明。
+- `canvas-design`：海报与艺术类 PNG / PDF 输出，附带 OFL 字体。
+
+安装或同步到当前用户的 DSH 技能目录（`~/.agents/skills`，或 `$DSH_AGENTS_HOME/skills`）：
+
+```powershell
+git pull
+.\scripts\install-skills.ps1
+# 只放到本仓库的 .agents/skills（仅以本仓库为项目根目录的会话可见）
+.\scripts\install-skills.ps1 -Project
+# 覆盖同名技能
+.\scripts\install-skills.ps1 -Force
+```
+
+POSIX 使用 `./scripts/install-skills.sh [--project] [--force]`。默认跳过已存在的同名技能；DSH 会扫描并 watch 这些目录，同步后新会话即可看到。技能来源、Apache-2.0 / OFL 许可与本地改动见各目录的 `ATTRIBUTION.md` 与 `LICENSE.txt`。
+
 ## 计费与隐私
 
 消费为日志用量乘以价格快照的**估算**，以官方账单为准。默认识别 DeepSeek 模型；其他厂商单价可自行配置。网页检索仅统计成功结算的内置调用。无法读取的会话和缺失的价格会显示提示。
@@ -56,7 +77,8 @@ dsh-plugins/
 ├── dsh-session-cost/       # 用量计费 0.0.6
 ├── dsh-theme-atelier/      # 主题工坊 0.0.6
 ├── dsh-code-mode-preset/   # Code 模式 0.0.4
-├── scripts/               # 统一安装、校验与打包
+├── skills/                 # 可选 Agent Skills（非插件）
+├── scripts/                # 插件与技能的安装、校验与打包
 ├── package.json
 └── package-lock.json
 ```
