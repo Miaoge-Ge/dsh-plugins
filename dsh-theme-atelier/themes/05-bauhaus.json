@@ -4,14 +4,6 @@
     "zh": "构成",
     "en": "Bauhaus"
   },
-  "style": {
-    "zh": "几何 · 现代",
-    "en": "Geometric modern"
-  },
-  "description": {
-    "zh": "清晰直角、克制的红与高对比，让每个信息都有位置。",
-    "en": "Strong geometry, restrained red and a precise visual hierarchy."
-  },
   "design": "geometric",
   "radii": [
     0,
@@ -22,29 +14,29 @@
     8
   ],
   "light": {
-    "bg": "#f7f7f3",
-    "sidebar": "#ecece5",
+    "bg": "#f3f3f3",
+    "sidebar": "#ececec",
     "surface": "#ffffff",
     "raised": "#ffffff",
-    "text": "#202422",
-    "muted": "#565b57",
-    "accent": "#a62e2e",
+    "text": "#3b3b3b",
+    "muted": "#686868",
+    "accent": "#0066b8",
     "onAccent": "#ffffff",
-    "line": "#cbcec7",
-    "soft": "#e6e8e0",
-    "code": "#f0f1eb"
+    "line": "#d8d8d8",
+    "soft": "#ebebeb",
+    "code": "#f6f6f6"
   },
   "dark": {
-    "bg": "#191b1b",
-    "sidebar": "#121514",
-    "surface": "#222725",
-    "raised": "#2b312e",
-    "text": "#f1f0e7",
-    "muted": "#bfc6bf",
-    "accent": "#ffa39b",
-    "onAccent": "#401a17",
-    "line": "#474d47",
-    "soft": "#333a35",
-    "code": "#1d2320"
+    "bg": "#1f1f1f",
+    "sidebar": "#181818",
+    "surface": "#252526",
+    "raised": "#2d2d30",
+    "text": "#d4d4d4",
+    "muted": "#a0a0a0",
+    "accent": "#4daafc",
+    "onAccent": "#10202e",
+    "line": "#3e3e42",
+    "soft": "#333337",
+    "code": "#1e1e1e"
   }
 }

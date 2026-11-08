@@ -4,47 +4,39 @@
     "zh": "终端",
     "en": "Terminal"
   },
-  "style": {
-    "zh": "理性 · 复古",
-    "en": "Retro technical"
-  },
-  "description": {
-    "zh": "墨绿工作台与荧光绿细节，干净利落的开发者气质。",
-    "en": "Deep green and phosphor accents. A focused technical workspace."
-  },
   "design": "terminal",
   "radii": [
-    0,
     2,
-    3,
     4,
-    5,
-    6
+    6,
+    8,
+    10,
+    12
   ],
   "light": {
-    "bg": "#f0f6f0",
-    "sidebar": "#e5eee4",
-    "surface": "#f8fcf6",
-    "raised": "#fffffa",
-    "text": "#163c27",
-    "muted": "#45664e",
-    "accent": "#176238",
+    "bg": "#fafafa",
+    "sidebar": "#eaeaeb",
+    "surface": "#ffffff",
+    "raised": "#ffffff",
+    "text": "#383a42",
+    "muted": "#636670",
+    "accent": "#2f61c9",
     "onAccent": "#ffffff",
-    "line": "#bfd1be",
-    "soft": "#dce9d9",
-    "code": "#e8f1e5"
+    "line": "#dbdbdc",
+    "soft": "#f0f0f1",
+    "code": "#f4f4f5"
   },
   "dark": {
-    "bg": "#0d1914",
-    "sidebar": "#0b1410",
-    "surface": "#13231b",
-    "raised": "#1b2e23",
-    "text": "#dcf1df",
-    "muted": "#a7c8af",
-    "accent": "#80e5a4",
-    "onAccent": "#10301d",
-    "line": "#314d39",
-    "soft": "#203a2a",
-    "code": "#102018"
+    "bg": "#282c34",
+    "sidebar": "#21252b",
+    "surface": "#2f343d",
+    "raised": "#383e4a",
+    "text": "#abb2bf",
+    "muted": "#a6aebb",
+    "accent": "#61afef",
+    "onAccent": "#1e2227",
+    "line": "#4a5160",
+    "soft": "#353b45",
+    "code": "#21252b"
   }
 }

@@ -1,8 +1,17 @@
 // Public, pure compiler. Theme files contain data only; no CSS selectors or scripts.
 export const paletteKeys = ['bg', 'sidebar', 'surface', 'raised', 'text', 'muted', 'accent', 'onAccent', 'line', 'soft', 'code'];
+
+// Small color utility for the few derived tokens the design system needs.
+// Inputs are validated six-digit hex colors, so the arithmetic is safe.
+function mix(a, b, weight) {
+  const channel = (hex, i) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+  const value = i => Math.round(channel(a, i) + (channel(b, i) - channel(a, i)) * weight);
+  return '#' + [0, 1, 2].map(i => value(i).toString(16).padStart(2, '0')).join('');
+}
+
 export function validateTheme(theme) {
   if (!theme || !/^[a-z][a-z0-9-]{1,39}$/.test(theme.id) || theme.id === 'native') throw new Error('Invalid theme id');
-  for (const key of ['name', 'description', 'style']) {
+  for (const key of ['name']) {
     if (!theme[key] || ['zh', 'en'].some(lang => typeof theme[key][lang] !== 'string' || !theme[key][lang].trim())) throw new Error(`${theme.id}: ${key} requires zh and en`);
   }
   if (!['minimal', 'editorial', 'glass', 'organic', 'geometric', 'terminal'].includes(theme.design)) throw new Error(`${theme.id}: invalid design`);
@@ -25,33 +34,52 @@ export function contrast(a, b) {
 export function paletteTokens(p, dark) {
   const t = {};
   const set = (names, value) => names.split(' ').forEach(name => { t[`--dsw-${name}`] = value; });
+
+  // Canvas and layered surfaces. Each step is a small lift, never a jump, so
+  // nested cards and menus read as one material instead of stacked boxes.
   set('alias-bg-base alias-bg-document-preview', p.bg);
   set('alias-bg-layer-1 specific-input-major alias-button-floating-fill', p.surface);
   set('alias-bg-layer-2 alias-bg-overlay specific-menu menu-surface-fill alias-menu-group-header-fill', p.raised);
   set('alias-bg-layer-3 alias-bg-module-platform alias-bg-multi-select specific-selector specific-tip alias-button-floating-hover alias-interactive-bg-hover-solid', p.soft);
+
+  // Type. Primary and secondary are deliberately close in value; the page
+  // stays readable in long sessions without grey-on-grey captions.
   set('alias-label-primary alias-label-primary-bluish alias-brand-text alias-menu-icon alias-label-document-preview', p.text);
   set('alias-label-secondary alias-label-primary-dimmed alias-label-tertiary alias-label-caption', p.muted);
+
+  // Accent and its controls. Hover is derived from the accent itself so every
+  // palette keeps a believable pressed state instead of a flat fill.
   set('alias-brand-primary alias-brand-primary-new-colorprimary-new-color alias-state-business-primary alias-link alias-button-primary-fill alias-button-info-fill alias-button-info-hover alias-button-contrast-fill focus-ring-color', p.accent);
+  set('alias-button-primary-hover', mix(p.accent, dark ? '#ffffff' : '#000000', 0.14));
   set('alias-label-primary-foreground', p.onAccent);
   // Inverted text sits on the inverse neutral surface, not the brand surface.
   set('alias-label-primary-inverted', p.bg);
   set('alias-brand-primary-invert', p.text);
   set('alias-border-l1 alias-border-l2 alias-border-l2-darkmode-thin alias-border-l3 alias-border-l4 alias-button-ghost-active-border elevation-stroke-color', p.line);
-  set('alias-button-primary-hover', p.accent);
+
+  // Interaction fills: a whisper of accent, never a wash of color.
   set('alias-button-primary-dimmed alias-button-elevated-fill alias-button-ghost-active-fill alias-button-ghost-active-hover', p.soft);
-  set('alias-interactive-bg-hover', p.accent + (dark ? '16' : '0c'));
-  set('alias-interactive-bg-active alias-interactive-bg-hover-accent alias-bg-document-selection', p.accent + '28');
+  set('alias-interactive-bg-hover', p.accent + (dark ? '1c' : '0f'));
+  set('alias-interactive-bg-active alias-interactive-bg-hover-accent', p.accent + '2b');
+  set('alias-bg-document-selection', p.accent + '33');
   set('alias-state-business-tertiary specific-bubble specific-bubble-highlight specific-sidebar-nav-item-active-accent', p.soft);
+
+  // Sidebar. The active row is a tinted veil rather than another grey block.
   set('specific-sidebar-fill', p.sidebar);
-  set('specific-sidebar-nav-item-active', p.soft);
-  set('alias-markdown-code-block alias-markdown-code-block-banner alias-markdown-inline-code specific-login-input', p.code);
+  set('specific-sidebar-nav-item-active', p.accent + (dark ? '26' : '12'));
+
+  // Code and quoting materials.
+  set('alias-markdown-code-block alias-markdown-inline-code specific-login-input', p.code);
+  set('alias-markdown-code-block-banner', mix(p.code, dark ? '#ffffff' : '#000000', 0.05));
   set('alias-markdown-citation alias-markdown-tag alias-markdown-placeholder alias-markdown-code-segment-selected alias-markdown-code-segment-unselected', p.soft);
-  set('alias-scrollbar-bg-l1 alias-scrollbar-bg-l2', p.muted + '66');
+
+  // Chrome details.
+  set('alias-scrollbar-bg-l1 alias-scrollbar-bg-l2', p.muted + '4d');
   set('alias-scrollbar-hover-l1 alias-scrollbar-hover-l2', p.muted);
-  set('alias-label-dimmed', p.muted + '99');
+  set('alias-label-dimmed', p.muted + 'a6');
   set('alias-tooltip-bg alias-toast-bg', dark ? p.raised : p.text);
   set('alias-toast-label', dark ? p.text : p.bg);
-  set('alias-tooltip-key-bg', dark ? p.soft : p.muted);
+  set('alias-tooltip-key-bg', dark ? p.soft : mix(p.text, '#ffffff', 0.22));
   set('alias-turn-trigger-bg', p.surface);
   set('alias-turn-trigger-bg-hover', p.soft);
   set('alias-switch-thumb', dark ? p.text : '#ffffff');
@@ -74,9 +102,18 @@ export function compileTheme(theme, signature = true) {
       tokens[`--dsw-radius-${name}`] = { light: `${theme.radii[i]}px`, dark: `${theme.radii[i]}px` };
     });
     // Public heading tokens: editorial character without touching body/code fonts.
+    // The shipped markdown CSS paints headings with the composite `font`
+    // shorthand (`font: var(--dsw-font-markdown-h1)`), so overriding only the
+    // family token would never reach a heading. Rebuild the shorthand from the
+    // host's own weight/size/line-height tokens, keeping its responsive scale.
     if (theme.design === 'editorial' || theme.design === 'organic') {
-      const serif = '"Iowan Old Style", "Palatino Linotype", "Songti SC", "SimSun", Georgia, serif';
-      for (const level of [1, 2]) tokens[`--dsw-font-markdown-h${level}-font-family`] = { light: serif, dark: serif };
+      const serif = '"Sitka Display", "Palatino Linotype", "Book Antiqua", Charter, Georgia, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", SimSun, serif';
+      for (const level of [1, 2, 3]) {
+        const family = `--dsw-font-markdown-h${level}-font-family`;
+        tokens[family] = { light: serif, dark: serif };
+        const shorthand = `var(--dsw-font-markdown-h${level}-font-weight) var(--dsw-font-markdown-h${level}-font-size) / var(--dsw-font-markdown-h${level}-line-height) var(${family})`;
+        tokens[`--dsw-font-markdown-h${level}`] = { light: shorthand, dark: shorthand };
+      }
     }
   }
   return tokens;

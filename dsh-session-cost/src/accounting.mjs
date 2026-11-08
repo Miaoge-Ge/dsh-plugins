@@ -11,6 +11,22 @@ export const WEB_PRICE = { search: 5 / 1000, fetch: 5 / 1000 };
 const WEB_TOOL_KIND = { web_search: 'search', web_fetch: 'fetch' };
 const HOLIDAYS = [['01-01','01-03'],['02-15','02-23'],['04-04','04-06'],['05-01','05-05'],['06-19','06-21'],['09-25','09-27'],['10-01','10-07']];
 export const dateKey = time => new Date(time + 8 * 3600000).toISOString().slice(0, 10);
+export const addDays = (key, days) => new Date(Date.parse(`${key}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
+// Presentation helpers for the same keys. Slice month/day ranges explicitly:
+// `Number(key.slice(5))` on a full date keeps the dash and yields NaN.
+export const monthText = key => `${key.slice(0, 4)}年${Number(key.slice(5, 7))}月`;
+export const dayText = key => `${Number(key.slice(5, 7))}月${Number(key.slice(8, 10))}日`;
+export const shortDay = key => `${key.slice(5, 7)}-${key.slice(8, 10)}`;
+export const dayAxis = key => `${Number(key.slice(5, 7))}/${Number(key.slice(8, 10))}`;
+// Fill the days between actual usage days so sparse charts do not imply that
+// two non-adjacent dates were consecutive. Newest `limit` days win.
+export function dailyWindow(dayKeys, limit = 60) {
+  if (!dayKeys.length) return {days: [], truncated: false};
+  const first = dayKeys[0], last = dayKeys[dayKeys.length - 1];
+  const from = first > addDays(last, -(limit - 1)) ? first : addDays(last, -(limit - 1));
+  const span = Math.round((Date.parse(`${last}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000) + 1;
+  return {days: Array.from({length: span}, (_, index) => addDays(from, index)), truncated: from > first};
+}
 export function isPeak(time) {
   const d = new Date(time + 8 * 3600000), key = dateKey(time), minutes = d.getUTCHours() * 60 + d.getUTCMinutes();
   const holiday = key.startsWith('2026-') && HOLIDAYS.some(([a,b]) => key.slice(5) >= a && key.slice(5) <= b);
@@ -93,9 +109,14 @@ export function foldEvents(events, sessionId) {
     const key = `${d.turn}:${d.step}`;
     if (key !== stepKey) {stepKey=key; attempt=0; started=undefined;}
     const id = `${sessionId}:${key}:${attempt}`;
+    // Keep the recorded route even when the usage sample is unusable: an
+    // aborted attempt should still appear under the model that produced it
+    // instead of collapsing every such call into an `unknown` pseudo-model.
+    const model = d.source?.model ?? route.model ?? 'unknown';
+    const provider = d.source?.provider ?? route.provider ?? 'unknown';
     const tokens = normalizeUsage(d.usage);
-    if (!tokens) {rows.set(id, {id,sessionId,invalid:true,time:started ?? e.time}); continue;}
-    rows.set(id, {id,sessionId,time:started ?? e.time,model:d.source?.model ?? route.model ?? 'unknown',provider:d.source?.provider ?? route.provider ?? 'unknown',tokens});
+    if (!tokens) {rows.set(id, {id,sessionId,invalid:true,time:started ?? e.time,model,provider}); continue;}
+    rows.set(id, {id,sessionId,time:started ?? e.time,model,provider,tokens});
   }
   return [...rows.values(), ...[...web.values()].filter(call => call.settled && !call.failed)];
 }

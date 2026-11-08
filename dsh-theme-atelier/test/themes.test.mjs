@@ -31,8 +31,57 @@ test('every override has both modes, and inherited semantics stay native', () =>
   }
 });
 
+test('serif heading tokens reach the shorthand the markdown CSS actually uses', () => {
+  for (const theme of themes) {
+    const tokens = compileTheme(theme);
+    const serif = theme.design === 'editorial' || theme.design === 'organic';
+    for (const level of [1, 2, 3]) {
+      const family = tokens[`--dsw-font-markdown-h${level}-font-family`];
+      const shorthand = tokens[`--dsw-font-markdown-h${level}`];
+      if (!serif) {
+        assert.equal(family, undefined);
+        assert.equal(shorthand, undefined);
+        continue;
+      }
+      assert.match(family.light, /Sitka Display/);
+      assert.equal(family.light, family.dark);
+      for (const mode of ['light', 'dark']) {
+        for (const part of ['font-weight', 'font-size', 'line-height', 'font-family']) {
+          assert.ok(shorthand[mode].includes(`var(--dsw-font-markdown-h${level}-${part})`), `${theme.id}/${mode}: h${level} ${part}`);
+        }
+      }
+    }
+  }
+});
+
+test('layer steps and derived interaction colors stay deliberate', () => {
+  for (const theme of themes) {
+    const tokens = compileTheme(theme);
+    const accent = tokens['--dsw-alias-brand-primary'];
+    const hover = tokens['--dsw-alias-button-primary-hover'];
+    for (const mode of ['light', 'dark']) {
+      const p = theme[mode];
+      assert.notEqual(p.bg, p.surface, `${theme.id}/${mode}: surface needs its own layer`);
+      assert.match(hover[mode], /^#[0-9a-f]{6}$/);
+      assert.notEqual(hover[mode], accent[mode]);
+      assert.match(tokens['--dsw-alias-interactive-bg-hover'][mode], /^#[0-9a-f]{6}[0-9a-f]{2}$/);
+      assert.match(tokens['--dsw-specific-sidebar-nav-item-active'][mode], /^#[0-9a-f]{6}[0-9a-f]{2}$/);
+    }
+  }
+});
+
+test('theme data stays name-and-palette only', () => {
+  for (const theme of themes) {
+    assert.deepEqual(Object.keys(theme).sort(), ['dark', 'design', 'id', 'light', 'name', 'radii']);
+    assert.ok(theme.name.zh.trim());
+    assert.ok(theme.name.en.trim());
+    assert.equal(theme.style, undefined);
+    assert.equal(theme.description, undefined);
+  }
+});
+
 test('invalid extension data fails at build boundary', () => {
-  for (const patch of [{id:'native'}, {id:'../../bad'}, {radii:[1]}, {design:'unknown'}, {light:{...themes[0].light, bg:'url(https://example.com)'}}]) {
+  for (const patch of [{id:'native'}, {id:'../../bad'}, {name:{}}, {radii:[1]}, {design:'unknown'}, {light:{...themes[0].light, bg:'url(https://example.com)'}}]) {
     assert.throws(() => validateTheme({...themes[0], ...patch}));
   }
 });

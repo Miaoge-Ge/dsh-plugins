@@ -5,12 +5,21 @@ window.__ModuleLoader__.load({
     const React = require('react');
     const h = React.createElement;
     const NS = 'theme.atelier';
-    const themes = [{"id":"obsidian","name":{"zh":"曜石","en":"Obsidian"},"style":{"zh":"静奢 · 精密","en":"Quiet luxury"},"description":{"zh":"冷灰与香槟金，留白有序，让注意力回到内容。","en":"Graphite, champagne and measured space. A quieter place to think."},"design":"minimal","radii":[3,6,10,14,18,24],"light":{"bg":"#faf9f6","sidebar":"#f0efeb","surface":"#ffffff","raised":"#ffffff","text":"#20242b","muted":"#575c65","accent":"#75572d","onAccent":"#ffffff","line":"#d9d8d2","soft":"#eeebe4","code":"#f1f0ec"},"dark":{"bg":"#13161c","sidebar":"#101319","surface":"#1b2028","raised":"#242a34","text":"#eae8e2","muted":"#b1b7c2","accent":"#dec79b","onAccent":"#24201a","line":"#363e4a","soft":"#2b3039","code":"#171b22"}},{"id":"paper","name":{"zh":"纸间","en":"Paper"},"style":{"zh":"编辑 · 人文","en":"Editorial"},"description":{"zh":"暖纸色、墨色与衬线标题，像翻开一本精心编排的书。","en":"Warm paper, ink and serif headings. The rhythm of a well-made book."},"design":"editorial","radii":[2,3,5,6,8,12],"light":{"bg":"#f6f1e7","sidebar":"#eee7d9","surface":"#fcf8f0","raised":"#fffcf6","text":"#302b26","muted":"#625749","accent":"#8b422c","onAccent":"#ffffff","line":"#d7cbbb","soft":"#e9dfd0","code":"#f0e8db"},"dark":{"bg":"#211e1a","sidebar":"#1b1916","surface":"#29251f","raised":"#332d26","text":"#f0e7d9","muted":"#c3b5a1","accent":"#e4b48e","onAccent":"#2a1b12","line":"#4b4135","soft":"#393027","code":"#24201b"}},{"id":"aurora","name":{"zh":"极光","en":"Aurora"},"style":{"zh":"通透 · 数字","en":"Digital calm"},"description":{"zh":"雾蓝与鸢尾紫，柔和层次中的轻盈数字空间。","en":"Mist blue and iris. Soft layers with a clear digital character."},"design":"glass","radii":[4,10,14,18,24,32],"light":{"bg":"#f4f6fc","sidebar":"#e9edf7","surface":"#ffffff","raised":"#ffffff","text":"#242b46","muted":"#535e7b","accent":"#5e48b0","onAccent":"#ffffff","line":"#cdd5e9","soft":"#e6eafa","code":"#eff2fa"},"dark":{"bg":"#141726","sidebar":"#111420","surface":"#1d2337","raised":"#272e46","text":"#e7ebfb","muted":"#b7c1df","accent":"#bfb1ff","onAccent":"#231b42","line":"#3c4664","soft":"#303754","code":"#191e30"}},{"id":"celadon","name":{"zh":"青瓷","en":"Celadon"},"style":{"zh":"东方 · 自然","en":"Organic"},"description":{"zh":"青瓷绿与温润石色，收敛的线条，安静的呼吸感。","en":"Celadon and warm stone. Gentle contours, naturally composed."},"design":"organic","radii":[4,8,14,20,26,34],"light":{"bg":"#f5f6ef","sidebar":"#e9eee3","surface":"#fcfcf7","raised":"#fffffb","text":"#253a31","muted":"#526658","accent":"#28664e","onAccent":"#ffffff","line":"#cbd6c6","soft":"#e1ebde","code":"#edf1e7"},"dark":{"bg":"#15221e","sidebar":"#111b18","surface":"#1c2d26","raised":"#26392f","text":"#e3eee3","muted":"#b0c8b5","accent":"#a0d6b2","onAccent":"#173021","line":"#3c5143","soft":"#2e4437","code":"#18271f"}},{"id":"bauhaus","name":{"zh":"构成","en":"Bauhaus"},"style":{"zh":"几何 · 现代","en":"Geometric modern"},"description":{"zh":"清晰直角、克制的红与高对比，让每个信息都有位置。","en":"Strong geometry, restrained red and a precise visual hierarchy."},"design":"geometric","radii":[0,2,3,4,6,8],"light":{"bg":"#f7f7f3","sidebar":"#ecece5","surface":"#ffffff","raised":"#ffffff","text":"#202422","muted":"#565b57","accent":"#a62e2e","onAccent":"#ffffff","line":"#cbcec7","soft":"#e6e8e0","code":"#f0f1eb"},"dark":{"bg":"#191b1b","sidebar":"#121514","surface":"#222725","raised":"#2b312e","text":"#f1f0e7","muted":"#bfc6bf","accent":"#ffa39b","onAccent":"#401a17","line":"#474d47","soft":"#333a35","code":"#1d2320"}},{"id":"terminal","name":{"zh":"终端","en":"Terminal"},"style":{"zh":"理性 · 复古","en":"Retro technical"},"description":{"zh":"墨绿工作台与荧光绿细节，干净利落的开发者气质。","en":"Deep green and phosphor accents. A focused technical workspace."},"design":"terminal","radii":[0,2,3,4,5,6],"light":{"bg":"#f0f6f0","sidebar":"#e5eee4","surface":"#f8fcf6","raised":"#fffffa","text":"#163c27","muted":"#45664e","accent":"#176238","onAccent":"#ffffff","line":"#bfd1be","soft":"#dce9d9","code":"#e8f1e5"},"dark":{"bg":"#0d1914","sidebar":"#0b1410","surface":"#13231b","raised":"#1b2e23","text":"#dcf1df","muted":"#a7c8af","accent":"#80e5a4","onAccent":"#10301d","line":"#314d39","soft":"#203a2a","code":"#102018"}}];
+    const themes = [{"id":"obsidian","name":{"zh":"曜石","en":"Obsidian"},"design":"minimal","radii":[2,4,6,8,10,14],"light":{"bg":"#f6f8fa","sidebar":"#eef1f4","surface":"#ffffff","raised":"#ffffff","text":"#1f2328","muted":"#59636e","accent":"#0860c4","onAccent":"#ffffff","line":"#d0d7de","soft":"#eaeef2","code":"#f6f8fa"},"dark":{"bg":"#0d1117","sidebar":"#010409","surface":"#161b22","raised":"#1c2129","text":"#e6edf3","muted":"#a5adb7","accent":"#58a6ff","onAccent":"#0d1117","line":"#30363d","soft":"#262c36","code":"#161b22"}},{"id":"paper","name":{"zh":"纸间","en":"Paper"},"design":"editorial","radii":[3,6,10,14,18,22],"light":{"bg":"#faf9f5","sidebar":"#f2f0e9","surface":"#fdfcf8","raised":"#ffffff","text":"#1f1e1b","muted":"#66635b","accent":"#a94c2c","onAccent":"#fffaf5","line":"#dfdbcf","soft":"#efede5","code":"#f5f3ec"},"dark":{"bg":"#1f1e1d","sidebar":"#191817","surface":"#262523","raised":"#2e2d2a","text":"#f0eee6","muted":"#b8b4a8","accent":"#e09b7c","onAccent":"#2a1a12","line":"#3c3a35","soft":"#35332f","code":"#1a1918"}},{"id":"aurora","name":{"zh":"极光","en":"Aurora"},"design":"glass","radii":[4,8,12,16,20,24],"light":{"bg":"#eceff4","sidebar":"#e5e9f0","surface":"#f8fafc","raised":"#ffffff","text":"#2e3440","muted":"#4c566a","accent":"#43658a","onAccent":"#ffffff","line":"#ccd4e0","soft":"#e5e9f0","code":"#f4f6f9"},"dark":{"bg":"#2e3440","sidebar":"#292e39","surface":"#3b4252","raised":"#434c5e","text":"#eceff4","muted":"#c8cfdb","accent":"#a3d4e0","onAccent":"#2e3440","line":"#3f4859","soft":"#4c566a","code":"#2b303b"}},{"id":"celadon","name":{"zh":"青瓷","en":"Celadon"},"design":"organic","radii":[2,4,6,8,10,14],"light":{"bg":"#fdf6e3","sidebar":"#f5efdc","surface":"#fffcf2","raised":"#fffffa","text":"#3f5154","muted":"#55696d","accent":"#1c6e8c","onAccent":"#f7fcfd","line":"#ddd4ba","soft":"#eee8d5","code":"#f7f1df"},"dark":{"bg":"#002b36","sidebar":"#00212b","surface":"#073642","raised":"#0a3a46","text":"#d9e3e3","muted":"#9fb0b0","accent":"#5fc2ba","onAccent":"#04242a","line":"#1a5665","soft":"#0f4653","code":"#032b35"}},{"id":"bauhaus","name":{"zh":"构成","en":"Bauhaus"},"design":"geometric","radii":[0,2,3,4,6,8],"light":{"bg":"#f3f3f3","sidebar":"#ececec","surface":"#ffffff","raised":"#ffffff","text":"#3b3b3b","muted":"#686868","accent":"#0066b8","onAccent":"#ffffff","line":"#d8d8d8","soft":"#ebebeb","code":"#f6f6f6"},"dark":{"bg":"#1f1f1f","sidebar":"#181818","surface":"#252526","raised":"#2d2d30","text":"#d4d4d4","muted":"#a0a0a0","accent":"#4daafc","onAccent":"#10202e","line":"#3e3e42","soft":"#333337","code":"#1e1e1e"}},{"id":"terminal","name":{"zh":"终端","en":"Terminal"},"design":"terminal","radii":[2,4,6,8,10,12],"light":{"bg":"#fafafa","sidebar":"#eaeaeb","surface":"#ffffff","raised":"#ffffff","text":"#383a42","muted":"#636670","accent":"#2f61c9","onAccent":"#ffffff","line":"#dbdbdc","soft":"#f0f0f1","code":"#f4f4f5"},"dark":{"bg":"#282c34","sidebar":"#21252b","surface":"#2f343d","raised":"#383e4a","text":"#abb2bf","muted":"#a6aebb","accent":"#61afef","onAccent":"#1e2227","line":"#4a5160","soft":"#353b45","code":"#21252b"}}];
     // Public, pure compiler. Theme files contain data only; no CSS selectors or scripts.
 const paletteKeys = ['bg', 'sidebar', 'surface', 'raised', 'text', 'muted', 'accent', 'onAccent', 'line', 'soft', 'code'];
+
+// Small color utility for the few derived tokens the design system needs.
+// Inputs are validated six-digit hex colors, so the arithmetic is safe.
+function mix(a, b, weight) {
+  const channel = (hex, i) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+  const value = i => Math.round(channel(a, i) + (channel(b, i) - channel(a, i)) * weight);
+  return '#' + [0, 1, 2].map(i => value(i).toString(16).padStart(2, '0')).join('');
+}
+
 function validateTheme(theme) {
   if (!theme || !/^[a-z][a-z0-9-]{1,39}$/.test(theme.id) || theme.id === 'native') throw new Error('Invalid theme id');
-  for (const key of ['name', 'description', 'style']) {
+  for (const key of ['name']) {
     if (!theme[key] || ['zh', 'en'].some(lang => typeof theme[key][lang] !== 'string' || !theme[key][lang].trim())) throw new Error(`${theme.id}: ${key} requires zh and en`);
   }
   if (!['minimal', 'editorial', 'glass', 'organic', 'geometric', 'terminal'].includes(theme.design)) throw new Error(`${theme.id}: invalid design`);
@@ -33,33 +42,52 @@ function contrast(a, b) {
 function paletteTokens(p, dark) {
   const t = {};
   const set = (names, value) => names.split(' ').forEach(name => { t[`--dsw-${name}`] = value; });
+
+  // Canvas and layered surfaces. Each step is a small lift, never a jump, so
+  // nested cards and menus read as one material instead of stacked boxes.
   set('alias-bg-base alias-bg-document-preview', p.bg);
   set('alias-bg-layer-1 specific-input-major alias-button-floating-fill', p.surface);
   set('alias-bg-layer-2 alias-bg-overlay specific-menu menu-surface-fill alias-menu-group-header-fill', p.raised);
   set('alias-bg-layer-3 alias-bg-module-platform alias-bg-multi-select specific-selector specific-tip alias-button-floating-hover alias-interactive-bg-hover-solid', p.soft);
+
+  // Type. Primary and secondary are deliberately close in value; the page
+  // stays readable in long sessions without grey-on-grey captions.
   set('alias-label-primary alias-label-primary-bluish alias-brand-text alias-menu-icon alias-label-document-preview', p.text);
   set('alias-label-secondary alias-label-primary-dimmed alias-label-tertiary alias-label-caption', p.muted);
+
+  // Accent and its controls. Hover is derived from the accent itself so every
+  // palette keeps a believable pressed state instead of a flat fill.
   set('alias-brand-primary alias-brand-primary-new-colorprimary-new-color alias-state-business-primary alias-link alias-button-primary-fill alias-button-info-fill alias-button-info-hover alias-button-contrast-fill focus-ring-color', p.accent);
+  set('alias-button-primary-hover', mix(p.accent, dark ? '#ffffff' : '#000000', 0.14));
   set('alias-label-primary-foreground', p.onAccent);
   // Inverted text sits on the inverse neutral surface, not the brand surface.
   set('alias-label-primary-inverted', p.bg);
   set('alias-brand-primary-invert', p.text);
   set('alias-border-l1 alias-border-l2 alias-border-l2-darkmode-thin alias-border-l3 alias-border-l4 alias-button-ghost-active-border elevation-stroke-color', p.line);
-  set('alias-button-primary-hover', p.accent);
+
+  // Interaction fills: a whisper of accent, never a wash of color.
   set('alias-button-primary-dimmed alias-button-elevated-fill alias-button-ghost-active-fill alias-button-ghost-active-hover', p.soft);
-  set('alias-interactive-bg-hover', p.accent + (dark ? '16' : '0c'));
-  set('alias-interactive-bg-active alias-interactive-bg-hover-accent alias-bg-document-selection', p.accent + '28');
+  set('alias-interactive-bg-hover', p.accent + (dark ? '1c' : '0f'));
+  set('alias-interactive-bg-active alias-interactive-bg-hover-accent', p.accent + '2b');
+  set('alias-bg-document-selection', p.accent + '33');
   set('alias-state-business-tertiary specific-bubble specific-bubble-highlight specific-sidebar-nav-item-active-accent', p.soft);
+
+  // Sidebar. The active row is a tinted veil rather than another grey block.
   set('specific-sidebar-fill', p.sidebar);
-  set('specific-sidebar-nav-item-active', p.soft);
-  set('alias-markdown-code-block alias-markdown-code-block-banner alias-markdown-inline-code specific-login-input', p.code);
+  set('specific-sidebar-nav-item-active', p.accent + (dark ? '26' : '12'));
+
+  // Code and quoting materials.
+  set('alias-markdown-code-block alias-markdown-inline-code specific-login-input', p.code);
+  set('alias-markdown-code-block-banner', mix(p.code, dark ? '#ffffff' : '#000000', 0.05));
   set('alias-markdown-citation alias-markdown-tag alias-markdown-placeholder alias-markdown-code-segment-selected alias-markdown-code-segment-unselected', p.soft);
-  set('alias-scrollbar-bg-l1 alias-scrollbar-bg-l2', p.muted + '66');
+
+  // Chrome details.
+  set('alias-scrollbar-bg-l1 alias-scrollbar-bg-l2', p.muted + '4d');
   set('alias-scrollbar-hover-l1 alias-scrollbar-hover-l2', p.muted);
-  set('alias-label-dimmed', p.muted + '99');
+  set('alias-label-dimmed', p.muted + 'a6');
   set('alias-tooltip-bg alias-toast-bg', dark ? p.raised : p.text);
   set('alias-toast-label', dark ? p.text : p.bg);
-  set('alias-tooltip-key-bg', dark ? p.soft : p.muted);
+  set('alias-tooltip-key-bg', dark ? p.soft : mix(p.text, '#ffffff', 0.22));
   set('alias-turn-trigger-bg', p.surface);
   set('alias-turn-trigger-bg-hover', p.soft);
   set('alias-switch-thumb', dark ? p.text : '#ffffff');
@@ -82,9 +110,18 @@ function compileTheme(theme, signature = true) {
       tokens[`--dsw-radius-${name}`] = { light: `${theme.radii[i]}px`, dark: `${theme.radii[i]}px` };
     });
     // Public heading tokens: editorial character without touching body/code fonts.
+    // The shipped markdown CSS paints headings with the composite `font`
+    // shorthand (`font: var(--dsw-font-markdown-h1)`), so overriding only the
+    // family token would never reach a heading. Rebuild the shorthand from the
+    // host's own weight/size/line-height tokens, keeping its responsive scale.
     if (theme.design === 'editorial' || theme.design === 'organic') {
-      const serif = '"Iowan Old Style", "Palatino Linotype", "Songti SC", "SimSun", Georgia, serif';
-      for (const level of [1, 2]) tokens[`--dsw-font-markdown-h${level}-font-family`] = { light: serif, dark: serif };
+      const serif = '"Sitka Display", "Palatino Linotype", "Book Antiqua", Charter, Georgia, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", SimSun, serif';
+      for (const level of [1, 2, 3]) {
+        const family = `--dsw-font-markdown-h${level}-font-family`;
+        tokens[family] = { light: serif, dark: serif };
+        const shorthand = `var(--dsw-font-markdown-h${level}-font-weight) var(--dsw-font-markdown-h${level}-font-size) / var(--dsw-font-markdown-h${level}-line-height) var(${family})`;
+        tokens[`--dsw-font-markdown-h${level}`] = { light: shorthand, dark: shorthand };
+      }
     }
   }
   return tokens;
@@ -117,35 +154,88 @@ function mountLayer(themeService, form, catalog) {
   return () => { disposed = true; unsubscribe(); release?.(); release = undefined; };
 }
 
-    const dictionaries = {"zh":{"meta":{"title":"主题工坊 · Atelier","description":"六套设计、十二套明暗配色；原生设置持久化，可扩展、可恢复。"},"ui":{"title":"主题工坊","subtitle":"把日常的工作空间，变成喜欢的模样。","palettes":"明暗配色","current":"当前空间","native":"原生主题","nativeDescription":"沿用 DeepSeek Harness 的原生外观。","appearance":"明暗模式","appearanceDescription":"与原生外观设置同步，支持跟随系统。","signature":"设计细节","signatureDescription":"使用主题圆角与标题字体；关闭后保留原生形状与排版。","collection":"找到你的氛围","filter":"筛选设计风格","all":"全部","quiet":"静谧","expressive":"个性","light":"浅色","dark":"深色","system":"跟随系统","apply":"应用","restore":"恢复原生主题","footer":"六种设计语言，明暗两种表达。字体大小与代码字体沿用你的设置。","saved":"已保存，下次启动继续生效。","saving":"正在保存…","saveError":"保存未成功，已保留原设置。请检查连接或设置权限后重试。","loading":"正在读取主题设置…","unavailable":"主题设置尚未加载，请重新打开 Harness。","readOnly":"当前设置为只读，可以查看主题，暂时无法保存。","unsupported":"此版本缺少主题图层接口，请升级 DeepSeek Harness 后使用。","designs":"种设计语言","previewLabel":"主题预览","previewMode":"预览明暗","applied":"已应用","applyTheme":"应用此主题 ↗","previewHint":"先看一看，再决定。","stageCaption":"你的下一段灵感，从这里开始。","makeItYours":"让细节合你心意"}},"en":{"meta":{"title":"Theme atelier","description":"Six designs and twelve palettes with native settings, extensible theme files and reversible token layers."},"ui":{"title":"Theme atelier","subtitle":"Make your everyday workspace feel like you.","palettes":"light & dark palettes","current":"YOUR WORKSPACE","native":"Original","nativeDescription":"The original DeepSeek Harness appearance.","appearance":"Appearance","appearanceDescription":"Uses native appearance settings, including your system preference.","signature":"Design details","signatureDescription":"Theme corners and heading type. Turn off for native geometry and typography.","collection":"Find your atmosphere","filter":"Filter design styles","all":"All","quiet":"Quiet","expressive":"Expressive","light":"Light","dark":"Dark","system":"System","apply":"Apply","restore":"Restore original theme","footer":"Six design languages, two expressions each. Your text sizes and code fonts stay yours.","saved":"Saved. Your theme will return next time.","saving":"Saving…","saveError":"Could not save. Previous settings are kept. Check your connection or write access and retry.","loading":"Loading theme settings…","unavailable":"Theme settings are not available yet. Reopen Harness.","readOnly":"Settings are read-only. You can browse themes, but cannot save changes.","unsupported":"This version has no theme layer API. Please update DeepSeek Harness.","designs":"design stories","previewLabel":"Preview theme","previewMode":"Preview appearance","applied":"Applied","applyTheme":"Apply theme ↗","previewHint":"Explore first. Make it yours.","stageCaption":"A little space for your next great idea.","makeItYours":"The finishing touches"}}};
-    const styles = "/* Theme atelier settings page. Same visual language as the rest of the harness:\n   theme tokens only, 13px base, hairline borders, no decoration of its own. */\n\n.at-page{\n  --at-line:var(--dsw-alias-border-l1);\n  --at-line-strong:var(--dsw-alias-border-l2);\n  --at-muted:var(--dsw-alias-label-tertiary);\n  --at-soft:var(--dsw-alias-label-secondary);\n  --at-surface:var(--dsw-alias-bg-layer-1);\n  --at-surface-2:var(--dsw-alias-bg-layer-2);\n  --at-hover:var(--dsw-alias-interactive-bg-hover);\n  --at-accent:var(--dsw-alias-brand-primary);\n  box-sizing:border-box;\n  width:100%;\n  max-width:920px;\n  margin:0 auto;\n  padding:28px 28px 22px;\n  color:var(--dsw-alias-label-primary);\n  font:13px/1.55 var(--dsw-font-family,\"Segoe UI\",\"Microsoft YaHei\",system-ui,sans-serif);\n  container-type:inline-size;\n}\n.at-page *{box-sizing:border-box}\n.at-page h1,.at-page h2,.at-page h3,.at-page p{margin:0}\n.at-page button{font:inherit;color:inherit;cursor:pointer}\n.at-page button:disabled{opacity:.45;cursor:default}\n.at-page :focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--at-accent));outline-offset:2px}\n\n/* header */\n.at-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}\n.at-head-main{min-width:0}\n.at-head h1{font-size:15px;font-weight:600;letter-spacing:-.1px}\n.at-head p{margin-top:3px;font-size:11.5px;color:var(--at-muted)}\n.at-btn{height:28px;padding:0 10px;border:1px solid var(--at-line);border-radius:var(--dsw-radius-sm,7px);background:transparent;color:var(--at-soft);font-size:12px;white-space:nowrap;flex:none}\n.at-btn:hover:not(:disabled){background:var(--at-hover);color:var(--dsw-alias-label-primary)}\n\n/* notices */\n.at-note{margin:0 0 10px;padding:8px 10px;border:1px solid var(--at-line);border-radius:var(--dsw-radius-sm,7px);background:var(--at-surface-2);color:var(--at-soft);font-size:11.5px}\n.at-note[role=\"alert\"]{border-color:color-mix(in oklab,var(--dsw-alias-state-error-primary) 35%,transparent);color:var(--dsw-alias-state-error-primary)}\n\n/* grid of design families */\n.at-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:8px}\n.at-card{display:flex;flex-direction:column;gap:9px;padding:10px;border:1px solid var(--at-line);border-radius:var(--dsw-radius-md,10px);background:var(--at-surface);text-align:left;transition:border-color .12s,box-shadow .12s}\n.at-card:hover:not(:disabled){border-color:var(--at-line-strong)}\n.at-card[aria-pressed=\"true\"]{border-color:color-mix(in oklab,var(--at-accent) 55%,var(--at-line));box-shadow:0 0 0 1px color-mix(in oklab,var(--at-accent) 45%,transparent)}\n.at-swatch{display:flex;height:44px;border:1px solid var(--at-line);border-radius:calc(var(--dsw-radius-md,10px) - 5px);overflow:hidden}\n.at-swatch i{flex:1;display:block}\n.at-swatch i:first-child{flex:2.2}\n.at-card-body{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}\n.at-card-body strong{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.at-card-body small{display:block;font-size:10.5px;color:var(--at-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.at-card-state{flex:none;font-size:10.5px;color:var(--at-muted);font-variant-numeric:tabular-nums}\n.at-card[aria-pressed=\"true\"] .at-card-state{color:var(--at-accent)}\n\n/* rows */\n.at-settings{margin-top:18px;border-top:1px solid var(--at-line)}\n.at-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 0;border-bottom:1px solid var(--at-line)}\n.at-row-copy{min-width:0}\n.at-row-copy h3{font-size:12.5px;font-weight:600}\n.at-row-copy p{margin-top:2px;font-size:11px;color:var(--at-muted)}\n.at-segment{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--at-line);border-radius:var(--dsw-radius-md,10px);background:var(--at-surface-2);flex:none}\n.at-segment button{height:24px;padding:0 10px;border:0;border-radius:calc(var(--dsw-radius-md,10px) - 3px);background:transparent;color:var(--at-soft);font-size:11.5px;white-space:nowrap}\n.at-segment button[aria-pressed=\"true\"]{background:var(--at-surface);color:var(--dsw-alias-label-primary);box-shadow:0 1px 2px rgb(0 0 0/.07)}\n\n/* switch */\n.at-switch{position:relative;flex:none;width:34px;height:20px;padding:0;border:1px solid var(--at-line-strong);border-radius:999px;background:var(--at-surface-2);transition:background .15s,border-color .15s}\n.at-switch span{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--dsw-alias-label-primary-inverted,var(--at-surface));box-shadow:0 1px 2px rgb(0 0 0/.25);transition:transform .15s}\n.at-switch[aria-checked=\"true\"]{background:var(--at-accent);border-color:var(--at-accent)}\n.at-switch[aria-checked=\"true\"] span{transform:translateX(14px);background:var(--dsw-alias-brand-primary-invert,#fff)}\n\n/* status */\n.at-status{margin-top:12px;min-height:16px;font-size:11px;color:var(--at-muted)}\n\n@container(max-width:640px){\n  .at-page{padding:20px 16px 16px}\n  .at-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}\n  .at-row{align-items:flex-start;flex-direction:column;gap:8px}\n}\n@media(max-width:600px){\n  .at-page{padding:16px 14px}\n  .at-segment button{padding:0 8px}\n}\n@media(prefers-reduced-motion:reduce){\n  .at-page *{transition:none!important}\n}\n@media(forced-colors:active){\n  .at-card,.at-swatch,.at-segment,.at-switch{border:1px solid CanvasText}\n  .at-card[aria-pressed=\"true\"]{outline:2px solid Highlight}\n}\n.at-card-description{font-size:12px;line-height:1.65;color:var(--at-soft)}\n.at-card{min-width:0}\n.at-card-body{flex-wrap:wrap}\n.at-card-body strong{font-size:14px}\n.at-card-body small{font-size:12px}\n@container(max-width:360px){.at-grid{grid-template-columns:minmax(0,1fr)}.at-head{flex-wrap:wrap}.at-row:has(.at-switch){flex-direction:row;align-items:center}}\n";
+    const dictionaries = {"zh":{"meta":{"title":"主题工坊 · Atelier","description":"六套参考成熟产品设计系统的明暗配色，以及 DSH 原生主题；原生设置持久化，可扩展、可恢复。"},"ui":{"title":"主题工坊","subtitle":"把日常的工作空间，变成喜欢的模样。","current":"当前","native":"DSH 原生","collection":"主题","makeItYours":"细节","appearance":"明暗模式","appearanceDescription":"与原生外观设置同步，支持跟随系统；切换后上方预览会同步更新。","signature":"设计细节","signatureDescription":"使用主题圆角与衬线标题；关闭后只保留配色。","light":"浅色","dark":"深色","system":"跟随系统","applied":"已应用","footer":"非官方主题；字体与代码高亮沿用原生设置。","saved":"已保存，下次启动继续生效。","saving":"正在保存…","saveError":"保存未成功，已保留原设置。请检查连接或设置权限后重试。","loading":"正在读取主题设置…","unavailable":"主题设置尚未加载，请重新打开 Harness。","readOnly":"当前设置为只读，可以查看主题，暂时无法保存。","unsupported":"此版本缺少主题图层接口，请升级 DeepSeek Harness 后使用。"}},"en":{"meta":{"title":"Theme atelier","description":"Six palettes informed by mature design systems, plus the DSH original theme, with native settings and reversible token layers."},"ui":{"title":"Theme atelier","subtitle":"Make your everyday workspace feel like you.","current":"Current","native":"DSH Original","collection":"Themes","makeItYours":"Details","appearance":"Appearance","appearanceDescription":"Uses native appearance settings, including your system preference. The previews above follow the active mode.","signature":"Design details","signatureDescription":"Theme corners and serif headings. Turn off for palette only.","light":"Light","dark":"Dark","system":"System","applied":"Applied","footer":"Unofficial themes. Fonts and syntax colors follow your native settings.","saved":"Saved. Your theme will return next time.","saving":"Saving…","saveError":"Could not save. Previous settings are kept. Check your connection or write access and retry.","loading":"Loading theme settings…","unavailable":"Theme settings are not available yet. Reopen Harness.","readOnly":"Settings are read-only. You can browse themes, but cannot save changes.","unsupported":"This version has no theme layer API. Please update DeepSeek Harness."}}};
+    const styles = "/* Theme atelier settings page. The page borrows the host's semantic tokens so\n   it changes with the applied theme; every preview is painted from its own\n   palette. No host selectors, no external assets. */\n\n.at-page{\n  --at-line:var(--dsw-alias-border-l1);\n  --at-line-strong:var(--dsw-alias-border-l2);\n  --at-muted:var(--dsw-alias-label-tertiary);\n  --at-soft:var(--dsw-alias-label-secondary);\n  --at-surface:var(--dsw-alias-bg-layer-1);\n  --at-accent:var(--dsw-alias-brand-primary);\n  --at-shadow:color-mix(in oklab,var(--dsw-alias-label-primary) 22%,transparent);\n  box-sizing:border-box;\n  width:100%;\n  max-width:960px;\n  margin:0 auto;\n  padding:30px 30px 24px;\n  color:var(--dsw-alias-label-primary);\n  font:13px/1.55 var(--dsw-font-family,\"Segoe UI\",\"Microsoft YaHei\",system-ui,sans-serif);\n  container-type:inline-size;\n}\n.at-page *{box-sizing:border-box}\n.at-page h1,.at-page h2,.at-page h3,.at-page p{margin:0}\n.at-page button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}\n.at-page button:disabled{opacity:.45;cursor:default}\n.at-page :focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--at-accent));outline-offset:2px}\n\n/* header */\n.at-head{margin-bottom:30px}\n.at-head-copy{min-width:0}\n.at-head h1{font-size:19px;font-weight:600;letter-spacing:-.012em;line-height:1.3}\n.at-subtitle{margin-top:7px;max-width:56ch;font-size:12.5px;line-height:1.6;color:var(--at-muted)}\n.at-current{display:flex;align-items:center;gap:7px;margin-top:11px;font-size:11.5px;color:var(--at-muted)}\n.at-current i{width:6px;height:6px;border-radius:50%;flex:none;box-shadow:0 0 0 3px color-mix(in oklab,var(--at-accent) 14%,transparent)}\n\n/* notices */\n.at-note{margin:0 0 18px;padding:9px 12px;border:1px solid var(--at-line);border-radius:calc(var(--dsw-radius-md,10px) + 1px);background:var(--at-surface);color:var(--at-soft);font-size:11.5px;line-height:1.55}\n.at-note[role=\"alert\"]{border-color:color-mix(in oklab,var(--dsw-alias-state-error-primary) 35%,var(--at-line));color:var(--dsw-alias-state-error-primary)}\n\n/* section headings */\n.at-gallery{margin-bottom:30px}\n.at-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:0 0 14px}\n.at-section-head h2{font-size:12px;font-weight:600;letter-spacing:.02em}\n\n/* theme cards: the preview is the card; the name lives in its title bar */\n.at-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px 20px}\n.at-card{display:block;min-width:0;padding:0;border:0;background:none;text-align:left}\n.at-stage{position:relative;display:flex;flex-direction:column;height:176px;border:1px solid var(--pv-line);border-radius:calc(var(--dsw-radius-md,10px) + 2px);background:var(--pv-bg);overflow:hidden;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}\n.at-card:hover:not(:disabled) .at-stage{transform:translateY(-1px);border-color:color-mix(in oklab,var(--pv-line) 55%,var(--pv-text));box-shadow:0 14px 30px -24px var(--at-shadow)}\n.at-card[aria-pressed=\"true\"] .at-stage{border-color:var(--at-accent);box-shadow:0 0 0 1px var(--at-accent)}\n.at-topbar{display:flex;align-items:center;gap:7px;flex:0 0 26px;padding:0 10px;background:var(--pv-raised);border-bottom:1px solid var(--pv-line)}\n.at-topbar-dot{width:6px;height:6px;border-radius:50%;background:var(--pv-accent);flex:none}\n.at-topbar-name{min-width:0;font-size:11px;font-weight:600;line-height:1;color:var(--pv-text);opacity:.88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.at-topbar-check{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-left:auto;border-radius:50%;background:color-mix(in oklab,var(--pv-accent) 16%,transparent);color:var(--pv-accent);flex:none}\n.at-workspace{display:flex;flex:1;min-height:0}\n.at-rail{display:flex;flex:0 0 27%;max-width:104px;min-width:64px;flex-direction:column;gap:6px;padding:10px 8px;background:var(--pv-sidebar);border-right:1px solid var(--pv-line)}\n.at-rail-mark{width:8px;height:8px;margin-bottom:1px;border-radius:2px;background:var(--pv-accent)}\n.at-rail-line{height:4px;border-radius:2px;background:var(--pv-muted);opacity:.34}\n.at-main{display:flex;flex:1;flex-direction:column;gap:5px;min-width:0;padding:10px}\n.at-type{font-family:var(--pv-font,inherit);font-size:19px;font-weight:500;line-height:1;letter-spacing:-.02em;color:var(--pv-text);opacity:.92}\n.at-text-line{height:3.5px;border-radius:2px;background:var(--pv-muted);opacity:.36}\n.at-mini-card{display:flex;flex-direction:column;gap:4px;margin-top:2px;padding:7px;border:1px solid var(--pv-line);border-radius:var(--pv-rad,7px);background:var(--pv-surface)}\n.at-mini-line{height:3px;border-radius:2px;background:var(--pv-muted);opacity:.42}\n.at-mini-line:first-child{height:4px;background:var(--pv-text);opacity:.5}\n.at-cta{width:32%;height:8px;margin-top:auto;border-radius:999px;background:var(--pv-accent)}\n.at-w90{width:90%}\n.at-w70{width:70%}\n.at-w60{width:60%}\n.at-w50{width:50%}\n\n/* shared settings: native rows, no nested panel */\n.at-panel{border-top:1px solid var(--at-line)}\n.at-row{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:16px 0;border-bottom:1px solid var(--at-line)}\n.at-row-copy{min-width:0}\n.at-row-copy h3{font-size:12.5px;font-weight:600}\n.at-row-copy p{max-width:48ch;margin-top:3px;font-size:11.5px;line-height:1.55;color:var(--at-muted)}\n.at-segment{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--at-line);border-radius:calc(var(--dsw-radius-md,10px) + 1px);background:var(--dsw-alias-bg-base);flex:none}\n.at-segment button{height:26px;padding:0 12px;border-radius:var(--dsw-radius-sm,7px);background:transparent;color:var(--at-soft);font-size:11.5px;white-space:nowrap;transition:background .16s,color .16s,box-shadow .16s}\n.at-segment button:hover:not(:disabled){color:var(--dsw-alias-label-primary)}\n.at-segment button[aria-pressed=\"true\"]{background:var(--at-surface);color:var(--dsw-alias-label-primary);box-shadow:0 1px 2px rgb(0 0 0/.08),0 0 0 1px var(--at-line)}\n.at-switch{position:relative;flex:none;width:36px;height:20px;border:1px solid var(--at-line-strong);border-radius:999px;background:var(--dsw-alias-bg-base);transition:background .16s,border-color .16s}\n.at-switch span{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--dsw-alias-switch-thumb,var(--at-surface));box-shadow:0 1px 2px rgb(0 0 0/.22);transition:transform .16s,background .16s}\n.at-switch[aria-checked=\"true\"]{background:var(--at-accent);border-color:var(--at-accent)}\n.at-switch[aria-checked=\"true\"] span{transform:translateX(16px);background:var(--dsw-alias-label-primary-foreground,#fff)}\n\n/* footer and status */\n.at-foot{margin-top:20px;font-size:11px;line-height:1.6;color:var(--at-muted)}\n.at-status{min-height:16px;margin-top:6px;font-size:11px;color:var(--at-muted)}\n\n@container(max-width:720px){\n  .at-subtitle{max-width:none}\n}\n@container(max-width:660px){\n  .at-grid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}\n}\n@container(max-width:540px){\n  .at-grid{grid-template-columns:minmax(0,1fr)}\n  .at-row{align-items:flex-start;flex-direction:column;gap:10px}\n}\n@media(max-width:640px){\n  .at-page{padding:20px 16px 16px}\n  .at-head h1{font-size:18px}\n}\n@media(prefers-reduced-motion:reduce){\n  .at-page *{transition:none!important;animation:none!important}\n}\n@media(forced-colors:active){\n  .at-stage,.at-segment,.at-switch,.at-note{border:1px solid CanvasText}\n  .at-card[aria-pressed=\"true\"] .at-stage{outline:2px solid Highlight;outline-offset:-2px}\n  .at-topbar-check{border:1px solid CanvasText}\n}\n";
+
+    const SERIF = '"Sitka Display", "Palatino Linotype", "Book Antiqua", Charter, Georgia, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", SimSun, serif';
+
+    // Native is a selectable choice like every theme, so the panel needs a
+    // representative palette for its preview. It follows the host's default
+    // light/dark surfaces and blue accent, but is never installed as a theme
+    // layer: choosing it simply releases this plugin's overrides.
+    const NATIVE = {
+      id: 'native',
+      design: 'minimal',
+      radii: [4, 6, 8, 10, 12, 14],
+      light: {
+        bg: '#ffffff', sidebar: '#f5f6f8', surface: '#ffffff', raised: '#ffffff',
+        text: '#1f2329', muted: '#5c6370', accent: '#4176e6', line: '#e4e7ec',
+        soft: '#f0f2f5', code: '#f7f8fa',
+      },
+      dark: {
+        bg: '#151517', sidebar: '#101012', surface: '#1c1d20', raised: '#232428',
+        text: '#e8eaed', muted: '#a0a4ab', accent: '#7aaaff', line: '#33353a',
+        soft: '#292a2e', code: '#191a1d',
+      },
+    };
 
     function PaletteMark({ size = 18 }) {
       return h('svg', { viewBox: '0 0 24 24', width: size, height: size, fill: 'none', 'aria-hidden': true },
         h('path', { d: 'M4 19 10 5h4l6 14h-5l-1.4-4H9.4L8 19z', fill: 'currentColor' }));
     }
 
-    // One card per design family. The swatch band is painted from the theme's own
-    // palette in the active scheme, so the choice reads as colour rather than as
-    // a screenshot of a fake workspace.
-    function ThemeCard({ theme, scheme, applied, disabled, onPick, t }) {
-      const p = theme[scheme];
+    function CheckMark() {
+      return h('svg', { viewBox: '0 0 12 12', width: 10, height: 10, fill: 'none', 'aria-hidden': true },
+        h('path', { d: 'M2.2 6.2 4.8 8.8 9.8 3.4', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    }
+
+    function previewStyle(palette, theme) {
+      return {
+        '--pv-bg': palette.bg,
+        '--pv-sidebar': palette.sidebar,
+        '--pv-surface': palette.surface,
+        '--pv-raised': palette.raised,
+        '--pv-text': palette.text,
+        '--pv-muted': palette.muted,
+        '--pv-accent': palette.accent,
+        '--pv-line': palette.line,
+        '--pv-soft': palette.soft,
+        '--pv-rad': `${Math.min(theme.radii[2], 10)}px`,
+        '--pv-font': theme.design === 'editorial' || theme.design === 'organic' ? SERIF : 'inherit',
+      };
+    }
+
+    // A miniature work surface painted from one palette. The theme name sits
+    // in the window's title bar, so the label cannot be mistaken for a caption
+    // that belongs to some other card.
+    function ThemePreview({ theme, scheme, label, applied }) {
+      return h('span', { className: 'at-stage', style: previewStyle(theme[scheme], theme), 'aria-hidden': true },
+        h('span', { className: 'at-topbar' },
+          h('span', { className: 'at-topbar-dot' }),
+          h('span', { className: 'at-topbar-name' }, label),
+          applied ? h('span', { className: 'at-topbar-check' }, h(CheckMark)) : null),
+        h('span', { className: 'at-workspace' },
+          h('span', { className: 'at-rail' },
+            h('span', { className: 'at-rail-mark' }),
+            h('span', { className: 'at-rail-line at-w70' }),
+            h('span', { className: 'at-rail-line at-w50' }),
+            h('span', { className: 'at-rail-line at-w60' })),
+          h('span', { className: 'at-main' },
+            h('span', { className: 'at-type' }, 'Aa'),
+            h('span', { className: 'at-text-line at-w90' }),
+            h('span', { className: 'at-mini-card' },
+              h('span', { className: 'at-mini-line at-w60' }),
+              h('span', { className: 'at-mini-line at-w90' })),
+            h('span', { className: 'at-cta' }))));
+    }
+
+    function ThemeCard({ theme, scheme, label, applied, disabled, onPick, t }) {
       return h('button', {
         type: 'button', className: 'at-card', 'aria-pressed': applied, disabled,
-        'aria-label': `${t(`${theme.id}.name`)} · ${t(`${theme.id}.style`)}`,
-        title: t(`${theme.id}.description`), onClick: () => onPick(theme.id),
+        'aria-label': `${label}${applied ? ` · ${t('applied')}` : ''}`,
+        onClick: () => onPick(theme.id),
       },
-        h('span', { className: 'at-swatch', 'aria-hidden': true },
-          h('i', { style: { background: p.bg } }),
-          h('i', { style: { background: p.sidebar } }),
-          h('i', { style: { background: p.surface } }),
-          h('i', { style: { background: p.accent } })),
-        h('span', { className: 'at-card-body' },
-          h('strong', null, t(`${theme.id}.name`)),
-          h('small', null, t(`${theme.id}.style`))),
-        h('span', {className:'at-card-description'}, t(`${theme.id}.description`)),
-        h('span', { className: 'at-card-state' }, applied ? t('applied') : '\u2192'),
-      );
+        h(ThemePreview, { theme, scheme, label, applied }));
     }
 
     function Atelier({ t, useSettings, useTheme, save, setMode, compatible }) {
@@ -161,49 +251,58 @@ function mountLayer(themeService, form, catalog) {
         catch { setMessage(t('saveError')); }
         finally { setPending(false); }
       };
+      const currentPalette = selected ? selected[scheme] : NATIVE[scheme];
       const currentLabel = selected ? t(`${selected.id}.name`) : t('native');
+      const choices = [...themes, NATIVE];
 
       return h('section', { className: 'at-page', 'aria-label': t('title'), 'aria-busy': pending },
         h('header', { className: 'at-head' },
-          h('div', { className: 'at-head-main' },
+          h('div', { className: 'at-head-copy' },
             h('h1', null, t('title')),
-            h('p', null, `${t('current')} \u00b7 ${currentLabel}`)),
-          h('button', {
-            type: 'button', className: 'at-btn', disabled: locked || value.theme === 'native',
-            onClick: () => run(() => save('theme', 'native')),
-          }, t('restore'))),
+            h('p', { className: 'at-subtitle' }, t('subtitle')),
+            h('p', { className: 'at-current' },
+              h('i', { style: { background: currentPalette.accent }, 'aria-hidden': true }),
+              `${t('current')} · ${currentLabel} · ${t(scheme)}`))),
 
         !compatible ? h('p', { className: 'at-note', role: 'alert' }, t('unsupported')) : null,
         settings.status !== 'ready' ? h('p', { className: 'at-note', role: 'status' }, t(settings.status === 'unavailable' ? 'unavailable' : 'loading')) : null,
         settings.status === 'ready' && !settings.writable ? h('p', { className: 'at-note' }, t('readOnly')) : null,
 
-        h('div', { className: 'at-grid' }, themes.map(theme => h(ThemeCard, {
-          key: theme.id, theme, scheme, t,
-          applied: value.theme === theme.id,
-          disabled: locked,
-          onPick: id => run(() => save('theme', id)),
-        }))),
+        h('section', { className: 'at-gallery', 'aria-label': t('collection') },
+          h('div', { className: 'at-grid' }, choices.map(theme => {
+            const label = theme.id === 'native' ? t('native') : t(`${theme.id}.name`);
+            return h(ThemeCard, {
+              key: theme.id, theme, scheme, label, t,
+              applied: value.theme === theme.id,
+              disabled: locked,
+              onPick: id => run(() => save('theme', id)),
+            });
+          }))),
 
-        h('div', { className: 'at-settings' },
-          h('div', { className: 'at-row' },
-            h('div', { className: 'at-row-copy' },
-              h('h3', null, t('appearance')),
-              h('p', null, t('appearanceDescription'))),
-            h('div', { className: 'at-segment', role: 'group', 'aria-label': t('appearance') },
-              ['light', 'dark', 'system'].map(mode => h('button', {
-                key: mode, type: 'button', 'aria-pressed': current?.preference === mode, disabled: locked,
-                onClick: () => run(() => setMode(mode)),
-              }, t(mode))))),
-          h('div', { className: 'at-row' },
-            h('div', { className: 'at-row-copy' },
-              h('h3', null, t('signature')),
-              h('p', null, t('signatureDescription'))),
-            h('button', {
-              type: 'button', className: 'at-switch', role: 'switch', 'aria-label': t('signature'),
-              'aria-checked': value.signature !== false, disabled: locked,
-              onClick: () => run(() => save('signature', value.signature === false)),
-            }, h('span')))),
+        h('section', { className: 'at-settings', 'aria-labelledby': 'at-settings-title' },
+          h('div', { className: 'at-section-head' },
+            h('h2', { id: 'at-settings-title' }, t('makeItYours'))),
+          h('div', { className: 'at-panel' },
+            h('div', { className: 'at-row' },
+              h('div', { className: 'at-row-copy' },
+                h('h3', null, t('appearance')),
+                h('p', null, t('appearanceDescription'))),
+              h('div', { className: 'at-segment', role: 'group', 'aria-label': t('appearance') },
+                ['light', 'dark', 'system'].map(mode => h('button', {
+                  key: mode, type: 'button', 'aria-pressed': current?.preference === mode, disabled: locked,
+                  onClick: () => run(() => setMode(mode)),
+                }, t(mode))))),
+            h('div', { className: 'at-row' },
+              h('div', { className: 'at-row-copy' },
+                h('h3', null, t('signature')),
+                h('p', null, t('signatureDescription'))),
+              h('button', {
+                type: 'button', className: 'at-switch', role: 'switch', 'aria-label': t('signature'),
+                'aria-checked': value.signature !== false, disabled: locked,
+                onClick: () => run(() => save('signature', value.signature === false)),
+              }, h('span'))))),
 
+        h('p', { className: 'at-foot' }, t('footer')),
         h('p', { className: 'at-status', role: 'status', 'aria-live': 'polite' }, pending ? t('saving') : message));
     }
 
@@ -216,7 +315,7 @@ function mountLayer(themeService, form, catalog) {
         const locale = {};
         for (const lang of ['zh', 'en']) {
           locale[lang] = { ...dictionaries[lang].ui };
-          for (const theme of themes) for (const key of ['name', 'description', 'style']) locale[lang][`${theme.id}.${key}`] = theme[key][lang];
+          for (const theme of themes) locale[lang][`${theme.id}.name`] = theme.name[lang];
         }
         ctx.effect(() => ctx.locale.register(NS, locale));
         if (compatible) ctx.effect(() => mountLayer(ctx.theme, form, themes));

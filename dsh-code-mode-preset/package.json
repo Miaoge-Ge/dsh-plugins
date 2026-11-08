@@ -1,9 +1,10 @@
 {
   "name": "@local/dsh-code-mode-preset",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "private": true,
   "type": "module",
-  "description": "Code 模式：直接实施、控制改动范围并运行项目检查的 DeepSeek Harness 编码预设",
+  "description": "Code 模式：直接实施、Git 纪律与工作树、持久终端、先读后写保护的 DeepSeek Harness 编码预设",
+  "license": "MIT",
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
@@ -20,8 +21,13 @@
   },
   "files": [
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "check": "node --test test/*.test.mjs"
+  },
   "engines": {
     "node": ">=20"
   }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dateKey,isPeak,tariffFor,normalizeUsage,compactEvent,foldEvents,summarize,toCSV,parseRates} from '../src/accounting.mjs';
+import {dateKey,isPeak,tariffFor,normalizeUsage,compactEvent,foldEvents,summarize,toCSV,parseRates,monthText,dayText,shortDay,dayAxis,addDays,dailyWindow} from '../src/accounting.mjs';
 import {loadLedger} from '../src/loader.mjs';
 const time=Date.parse('2026-11-06T01:00:00Z');
 const usage={inputTokens:1e6,outputTokens:1e6,cacheReadTokens:1e6,cacheWriteTokens:0};
@@ -9,6 +9,26 @@ const sample=(seq,model='deepseek-flash',step=1)=>compactEvent(event('assistant/
 test('Shanghai day/month boundaries and peak windows do not depend on device timezone',()=>{
   assert.equal(dateKey(Date.parse('2026-10-31T16:00:00Z')),'2026-11-01');
   for(const [iso,peak] of [['2026-11-06T00:59:00Z',false],['2026-11-06T01:00:00Z',true],['2026-11-06T04:00:00Z',false],['2026-11-06T06:00:00Z',true],['2026-11-06T10:00:00Z',false],['2026-11-07T02:00:00Z',false],['2026-10-01T02:00:00Z',false]])assert.equal(isPeak(Date.parse(iso)),peak,iso);
+});
+test('date labels keep month and day ranges instead of producing NaN',()=>{
+  assert.equal(monthText('2026-11'),'2026年11月');
+  assert.equal(dayText('2026-11-08'),'11月8日');
+  assert.equal(dayText('2026-01-05'),'1月5日');
+  assert.equal(shortDay('2026-11-06'),'11-06');
+  assert.equal(shortDay('2026-01-05'),'01-05');
+  assert.equal(dayAxis('2026-11-06'),'11/6');
+  assert.equal(dayAxis('2026-01-05'),'1/5');
+  assert.equal(addDays('2026-11-01',-1),'2026-10-31');
+  assert.equal(addDays('2026-12-31',1),'2027-01-01');
+  assert.equal(addDays('2024-02-28',1),'2024-02-29');
+  assert.deepEqual(dailyWindow([]),{days:[],truncated:false});
+  assert.deepEqual(dailyWindow(['2026-11-01','2026-11-03']),{days:['2026-11-01','2026-11-02','2026-11-03'],truncated:false});
+  const long=Array.from({length:61},(_,index)=>addDays('2026-09-01',index));
+  const window=dailyWindow(long);
+  assert.equal(window.days.length,60);
+  assert.equal(window.days[0],'2026-09-02');
+  assert.equal(window.days.at(-1),'2026-10-31');
+  assert.equal(window.truncated,true);
 });
 test('aliases work while unrelated providers and model substrings stay unpriced',()=>{
   assert.ok(tariffFor('deepseek-v4-flash-vision-exp','deepseek-account'));
@@ -42,6 +62,18 @@ test('unknown models retain tokens but expose incomplete totals',()=>{
   const summary=summarize(foldEvents([sample(1,'unknown-model')],'s'));
   assert.equal(summary.unpriced,1);assert.equal(summary.cost,0);assert.equal(summary.totalTokens,3e6);
   assert.match(toCSV(summary),/cost_cny/);assert.match(toCSV({...summary,models:[{...summary.models[0],model:'=1+2'}]}),/'=1\+2/);
+});
+test('records without a usable usage sample keep their recorded route',()=>{
+  const attempt=compactEvent(event('assistant/attempt',2,{turn:1,step:1,stream:[{type:'chunk',chunk:{type:'finish'}}]}));
+  const resumed=foldEvents([event('request/context',1,{provider:'deepseek-account',model:'deepseek-flash'}),attempt],'s');
+  assert.equal(resumed.length,1);assert.equal(resumed[0].invalid,true);
+  assert.equal(resumed[0].provider,'deepseek-account');assert.equal(resumed[0].model,'deepseek-flash');
+  const summary=summarize(resumed);
+  assert.equal(summary.invalid,1);assert.equal(summary.calls,1);
+  assert.deepEqual(summary.models.map(m=>`${m.provider}/${m.model}`),['deepseek-account/deepseek-flash']);
+  const interrupted=compactEvent(event('assistant/message',4,{turn:2,step:1,message:{source:{provider:'xiaomi',model:'mimo-v2.6-pro'}}}));
+  const rows=foldEvents([interrupted],'s');
+  assert.equal(rows[0].invalid,true);assert.equal(rows[0].model,'mimo-v2.6-pro');assert.equal(rows[0].provider,'xiaomi');
 });
 test('custom prices persist as validated CNY rates and do not inherit peak discounts',()=>{
   const rates=parseRates('{"deepseek-account/unknown-model":{"input":1,"cacheRead":0.1,"cacheWrite":1,"output":2}}');

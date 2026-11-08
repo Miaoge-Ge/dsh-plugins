@@ -1,9 +1,9 @@
 {
   "name": "@local/session-cost",
-  "version": "0.0.1",
+  "version": "0.0.5",
   "private": true,
   "type": "module",
-  "description": "DeepSeek Harness usage dashboard: today/month spending computed per call from the official price list, account balance, per-model token accounting and CSV export.",
+  "description": "DeepSeek Harness usage and billing dashboard: per-call costs from the official price list, account balance, per-model token accounting and CSV export.",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",

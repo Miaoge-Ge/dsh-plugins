@@ -17,6 +17,22 @@ const WEB_PRICE = { search: 5 / 1000, fetch: 5 / 1000 };
 const WEB_TOOL_KIND = { web_search: 'search', web_fetch: 'fetch' };
 const HOLIDAYS = [['01-01','01-03'],['02-15','02-23'],['04-04','04-06'],['05-01','05-05'],['06-19','06-21'],['09-25','09-27'],['10-01','10-07']];
 const dateKey = time => new Date(time + 8 * 3600000).toISOString().slice(0, 10);
+const addDays = (key, days) => new Date(Date.parse(`${key}T00:00:00Z`) + days * 86400000).toISOString().slice(0, 10);
+// Presentation helpers for the same keys. Slice month/day ranges explicitly:
+// `Number(key.slice(5))` on a full date keeps the dash and yields NaN.
+const monthText = key => `${key.slice(0, 4)}年${Number(key.slice(5, 7))}月`;
+const dayText = key => `${Number(key.slice(5, 7))}月${Number(key.slice(8, 10))}日`;
+const shortDay = key => `${key.slice(5, 7)}-${key.slice(8, 10)}`;
+const dayAxis = key => `${Number(key.slice(5, 7))}/${Number(key.slice(8, 10))}`;
+// Fill the days between actual usage days so sparse charts do not imply that
+// two non-adjacent dates were consecutive. Newest `limit` days win.
+function dailyWindow(dayKeys, limit = 60) {
+  if (!dayKeys.length) return {days: [], truncated: false};
+  const first = dayKeys[0], last = dayKeys[dayKeys.length - 1];
+  const from = first > addDays(last, -(limit - 1)) ? first : addDays(last, -(limit - 1));
+  const span = Math.round((Date.parse(`${last}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000) + 1;
+  return {days: Array.from({length: span}, (_, index) => addDays(from, index)), truncated: from > first};
+}
 function isPeak(time) {
   const d = new Date(time + 8 * 3600000), key = dateKey(time), minutes = d.getUTCHours() * 60 + d.getUTCMinutes();
   const holiday = key.startsWith('2026-') && HOLIDAYS.some(([a,b]) => key.slice(5) >= a && key.slice(5) <= b);
@@ -99,9 +115,14 @@ function foldEvents(events, sessionId) {
     const key = `${d.turn}:${d.step}`;
     if (key !== stepKey) {stepKey=key; attempt=0; started=undefined;}
     const id = `${sessionId}:${key}:${attempt}`;
+    // Keep the recorded route even when the usage sample is unusable: an
+    // aborted attempt should still appear under the model that produced it
+    // instead of collapsing every such call into an `unknown` pseudo-model.
+    const model = d.source?.model ?? route.model ?? 'unknown';
+    const provider = d.source?.provider ?? route.provider ?? 'unknown';
     const tokens = normalizeUsage(d.usage);
-    if (!tokens) {rows.set(id, {id,sessionId,invalid:true,time:started ?? e.time}); continue;}
-    rows.set(id, {id,sessionId,time:started ?? e.time,model:d.source?.model ?? route.model ?? 'unknown',provider:d.source?.provider ?? route.provider ?? 'unknown',tokens});
+    if (!tokens) {rows.set(id, {id,sessionId,invalid:true,time:started ?? e.time,model,provider}); continue;}
+    rows.set(id, {id,sessionId,time:started ?? e.time,model,provider,tokens});
   }
   return [...rows.values(), ...[...web.values()].filter(call => call.settled && !call.failed)];
 }
@@ -210,55 +231,126 @@ function normalizeBalance(result) {
   return infos.length?{ok:true,available:true,infos}:{ok:false,reason:'payload'};
 }
 
-    const CSS = "/* Session-cost surfaces. Everything is expressed in harness theme tokens so the\n   dashboard follows the active theme (including third-party token layers). */\n\n.dsc-dashboard{\n  --dsc-line:var(--dsw-alias-border-l1);\n  --dsc-line-strong:var(--dsw-alias-border-l2);\n  --dsc-muted:var(--dsw-alias-label-tertiary);\n  --dsc-soft:var(--dsw-alias-label-secondary);\n  --dsc-surface:var(--dsw-alias-bg-layer-1);\n  --dsc-surface-2:var(--dsw-alias-bg-layer-2);\n  --dsc-hover:var(--dsw-alias-interactive-bg-hover);\n  --dsc-accent:var(--dsw-alias-brand-primary);\n  box-sizing:border-box;\n  width:100%;\n  max-width:920px;\n  margin:0 auto;\n  padding:28px 28px 22px;\n  color:var(--dsw-alias-label-primary);\n  font:13px/1.55 var(--dsw-font-family,\"Segoe UI\",\"Microsoft YaHei\",system-ui,sans-serif);\n  container-type:inline-size;\n}\n.dsc-dashboard *{box-sizing:border-box}\n.dsc-dashboard h1,.dsc-dashboard h2,.dsc-dashboard h3,.dsc-dashboard p,.dsc-dashboard dl,.dsc-dashboard dd,.dsc-dashboard dt{margin:0}\n.dsc-dashboard button,.dsc-dashboard input,.dsc-dashboard textarea{font:inherit;color:inherit}\n.dsc-dashboard button,.dsc-dashboard summary{cursor:pointer}\n.dsc-dashboard button:disabled{opacity:.5;cursor:default}\n.dsc-dashboard :focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsc-accent));outline-offset:2px}\n.dsc-dashboard a{color:var(--dsw-alias-link,var(--dsc-accent));text-decoration:none}\n.dsc-dashboard a:hover{text-decoration:underline}\n\n/* ── header ─────────────────────────────────────────────── */\n.dsc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}\n.dsc-head-main{min-width:0}\n.dsc-head h1{font-size:15px;font-weight:600;letter-spacing:-.1px}\n.dsc-head p{margin-top:3px;font-size:11.5px;color:var(--dsc-muted)}\n.dsc-head-actions{display:flex;align-items:center;gap:6px;flex:none}\n.dsc-btn{height:28px;padding:0 10px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-sm,7px);background:transparent;color:var(--dsc-soft);font-size:12px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}\n.dsc-btn:hover:not(:disabled){background:var(--dsc-hover);color:var(--dsw-alias-label-primary)}\n.dsc-btn svg{width:13px;height:13px}\n.dsc-btn--icon{width:28px;padding:0;justify-content:center;font-size:15px;line-height:1}\n\n/* ── hero: today + balance ──────────────────────────────── */\n.dsc-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,auto);gap:20px;align-items:center;padding:16px 18px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-lg,12px);background:var(--dsc-surface)}\n.dsc-hero-main{min-width:0}\n.dsc-eyebrow{font-size:11px;color:var(--dsc-muted);letter-spacing:.02em}\n.dsc-hero-value{margin-top:2px;font-size:32px;line-height:1.15;font-weight:600;letter-spacing:-.8px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}\n.dsc-hero-meta{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:11.5px;color:var(--dsc-muted);font-variant-numeric:tabular-nums}\n.dsc-hero-meta b{font-weight:600;color:var(--dsc-soft)}\n.dsc-balance{min-width:0;padding-left:20px;border-left:1px solid var(--dsc-line);display:flex;flex-direction:column;gap:1px;text-align:right}\n.dsc-balance span{font-size:11px;color:var(--dsc-muted)}\n.dsc-balance strong{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.2px}\n.dsc-balance small{font-size:10.5px;color:var(--dsc-muted);font-variant-numeric:tabular-nums}\n.dsc-balance small b{font-weight:500;color:var(--dsc-soft)}\n\n/* ── stat row ───────────────────────────────────────────── */\n.dsc-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}\n.dsc-stat{padding:10px 12px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-md,10px);background:var(--dsc-surface);display:flex;flex-direction:column;gap:1px;min-width:0}\n.dsc-stat span{font-size:11px;color:var(--dsc-muted)}\n.dsc-stat strong{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.2px;overflow-wrap:anywhere}\n.dsc-stat small{font-size:10.5px;color:var(--dsc-muted);font-variant-numeric:tabular-nums}\n\n/* ── toolbar ────────────────────────────────────────────── */\n.dsc-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0 12px}\n.dsc-tabs{display:inline-flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-md,10px);background:var(--dsc-surface-2)}\n.dsc-tabs button{height:26px;padding:0 11px;border:0;border-radius:calc(var(--dsw-radius-md,10px) - 3px);background:transparent;color:var(--dsc-soft);font-size:12px;white-space:nowrap}\n.dsc-tabs button:hover{color:var(--dsw-alias-label-primary)}\n.dsc-tabs button[aria-pressed=\"true\"]{background:var(--dsc-surface);color:var(--dsw-alias-label-primary);box-shadow:0 1px 2px rgb(0 0 0/.07)}\n.dsc-toolbar-right{display:flex;align-items:center;gap:6px}\n.dsc-toolbar-right input[type=\"month\"]{height:26px;padding:0 8px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-sm,7px);background:transparent;font-size:12px}\n\n/* ── notices ───────────────────────────────────────────── */\n.dsc-notice{margin:0 0 10px;padding:8px 10px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-sm,7px);background:var(--dsc-surface-2);color:var(--dsc-soft);font-size:11.5px}\n.dsc-notice[role=\"alert\"]{border-color:color-mix(in oklab,var(--dsw-alias-state-error-primary) 35%,transparent);color:var(--dsw-alias-state-error-primary)}\n\n/* ── section heading ───────────────────────────────────── */\n.dsc-section{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:16px 0 8px}\n.dsc-section h2{font-size:12.5px;font-weight:600}\n.dsc-section p{font-size:11px;color:var(--dsc-muted);font-variant-numeric:tabular-nums}\n.dsc-section strong{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}\n\n/* ── model rows ────────────────────────────────────────── */\n.dsc-models{display:flex;flex-direction:column;gap:8px}\n.dsc-model{border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-md,10px);background:var(--dsc-surface);padding:11px 13px;display:flex;flex-direction:column;gap:9px}\n.dsc-model-head{display:flex;align-items:center;justify-content:space-between;gap:12px}\n.dsc-model-id{display:flex;align-items:center;gap:8px;min-width:0}\n.dsc-badge{flex:none;width:22px;height:22px;border-radius:6px;border:1px solid var(--dsc-line);background:var(--dsc-surface-2);display:grid;place-items:center;font-size:10px;font-weight:600;color:var(--dsc-soft)}\n.dsc-model-id h3{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.dsc-model-id small{display:block;font-size:10.5px;color:var(--dsc-muted)}\n.dsc-model-cost{text-align:right;flex:none}\n.dsc-model-cost strong{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}\n.dsc-model-cost small{display:block;font-size:10.5px;color:var(--dsc-muted)}\n.dsc-bar{height:3px;border-radius:999px;background:var(--dsc-surface-2);overflow:hidden}\n.dsc-bar i{display:block;height:100%;border-radius:999px;background:var(--dsc-accent);opacity:.75}\n.dsc-buckets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 10px}\n.dsc-bucket{min-width:0}\n.dsc-bucket dt{font-size:10.5px;color:var(--dsc-muted);white-space:nowrap}\n.dsc-bucket dd{font-size:12px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}\n.dsc-bucket dd small{display:block;font-size:10.5px;color:var(--dsc-muted)}\n\n/* ── empty ─────────────────────────────────────────────── */\n.dsc-empty{display:flex;flex-direction:column;align-items:center;gap:4px;padding:32px 16px;border:1px dashed var(--dsc-line-strong);border-radius:var(--dsw-radius-md,10px);color:var(--dsc-muted);text-align:center}\n.dsc-empty svg{width:22px;height:22px;opacity:.7;margin-bottom:2px}\n.dsc-empty h3{font-size:12.5px;font-weight:600;color:var(--dsc-soft)}\n.dsc-empty p{font-size:11.5px}\n\n/* ── chart ─────────────────────────────────────────────── */\n.dsc-chart-card{margin-top:16px;padding:12px 13px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-md,10px);background:var(--dsc-surface)}\n.dsc-chart{display:flex;align-items:flex-end;gap:3px;height:92px;margin-top:10px}\n.dsc-chart--hours{gap:2px;height:84px}\n.dsc-model--web{padding-top:10px}\n.dsc-day{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:3px}\n.dsc-day i{display:block;border-radius:2px 2px 0 0;background:var(--dsc-accent);opacity:.55;min-height:2px}\n.dsc-day:hover i{opacity:.9}\n.dsc-day span{font-size:9px;color:var(--dsc-muted);text-align:center;height:11px;line-height:11px;font-variant-numeric:tabular-nums}\n.dsc-table-wrap{margin-top:10px;max-height:220px;overflow:auto}\n.dsc-table{width:100%;border-collapse:collapse;font-size:11.5px;font-variant-numeric:tabular-nums}\n.dsc-table th,.dsc-table td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--dsc-line)}\n.dsc-table th:first-child,.dsc-table td:first-child{text-align:left}\n.dsc-table th{color:var(--dsc-muted);font-weight:500;position:sticky;top:0;background:var(--dsc-surface)}\n.dsc-details{margin-top:8px}\n.dsc-details>summary{font-size:11.5px;color:var(--dsc-muted);list-style:none;display:inline-flex;align-items:center;gap:4px}\n.dsc-details>summary::-webkit-details-marker{display:none}\n.dsc-details>summary::before{content:\"›\";display:inline-block;transition:transform .12s}\n.dsc-details[open]>summary::before{transform:rotate(90deg)}\n\n/* ── rates editor ──────────────────────────────────────── */\n.dsc-rates{margin-top:16px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-md,10px);padding:11px 13px;font-size:11.5px;background:var(--dsc-surface)}\n.dsc-rates p{font-size:11px;color:var(--dsc-muted);margin:6px 0}\n.dsc-rates textarea{width:100%;min-height:112px;resize:vertical;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-sm,7px);padding:8px;font:11.5px/1.6 Consolas,monospace;background:var(--dsc-surface-2);margin:8px 0}\n.dsc-rates-actions{display:flex;align-items:center;gap:10px}\n.dsc-rates span[role=\"status\"]{font-size:11px;color:var(--dsc-muted)}\n\n/* ── footer ────────────────────────────────────────────── */\n.dsc-foot{margin-top:16px;padding-top:10px;border-top:1px solid var(--dsc-line);display:flex;flex-direction:column;gap:2px;font-size:10.5px;line-height:1.6;color:var(--dsc-muted)}\n.dsc-foot summary{cursor:pointer}\n\n/* ── dock pill ─────────────────────────────────────────── */\n.dsc-anchor{display:inline-flex;min-width:0;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px))}\n.dsc-pill{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:1px 8px;border:0;border-radius:var(--dsw-radius-sm,7px);background:transparent;color:var(--dsw-alias-label-tertiary);font:inherit;line-height:inherit;font-variant-numeric:tabular-nums;white-space:nowrap}\n.dsc-pill:hover,.dsc-pill[aria-expanded=\"true\"]{background:var(--dsc-hover,var(--dsw-alias-interactive-bg-hover));color:var(--dsw-alias-label-secondary)}\n.dsc-pill svg{flex:none;width:13px;height:13px}\n.dsc-pill span{overflow:hidden;text-overflow:ellipsis;min-width:0}\n.dsc-pill i{font-style:normal;color:var(--dsw-alias-label-tertiary);opacity:.55;margin:0 1px}\n\n/* ── modal ─────────────────────────────────────────────── */\n.dsc-backdrop{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:24px;background:rgb(0 0 0/.34)}\n.dsc-modal{width:min(900px,100%);max-height:min(86vh,880px);overflow:auto;overscroll-behavior:contain;border-radius:var(--dsw-radius-xl,16px);background:var(--dsw-alias-bg-base);border:1px solid var(--dsc-line-strong);box-shadow:0 24px 64px rgb(0 0 0/.22)}\n.dsc-modal .dsc-dashboard{max-width:none;padding:20px 22px 16px}\n.dsc-modal .dsc-head h1{font-size:14px}\n\n/* ── responsive ────────────────────────────────────────── */\n@container(max-width:640px){\n  .dsc-dashboard{padding:20px 16px 16px}\n  .dsc-hero{grid-template-columns:1fr;gap:12px}\n  .dsc-balance{padding-left:0;border-left:0;border-top:1px solid var(--dsc-line);padding-top:8px;text-align:left}\n  .dsc-stats{grid-template-columns:repeat(2,minmax(0,1fr))}\n  .dsc-buckets{grid-template-columns:repeat(2,minmax(0,1fr))}\n  .dsc-hero-value{font-size:26px}\n  .dsc-head h1{font-size:14px}\n}\n@media(max-width:600px){\n  .dsc-backdrop{padding:10px}\n  .dsc-modal{max-height:92vh}\n  .dsc-modal .dsc-dashboard{padding:16px 14px}\n  .dsc-toolbar{gap:8px}\n  .dsc-tabs button{padding:0 9px}\n  .dsc-badge{display:none}\n}\n@media(prefers-reduced-motion:reduce){\n  .dsc-dashboard *{transition:none!important;animation:none!important}\n}\n@media(forced-colors:active){\n  .dsc-hero,.dsc-stat,.dsc-model,.dsc-chart-card{border:1px solid CanvasText}\n  .dsc-bar i,.dsc-day i{background:Highlight}\n  .dsc-tabs button[aria-pressed=\"true\"]{outline:2px solid Highlight}\n}\n";
+    const CSS = "/* Usage billing surfaces. Every colour, radius and font comes from the live\n   harness theme, so the page follows built-in and third-party token layers.\n   The layout is deliberately quiet: one focal surface, hairline rules, and\n   numeric type instead of a grid of cards. */\n\n.dsc{\n  --dsc-line:var(--dsw-alias-border-l1);\n  --dsc-line-2:var(--dsw-alias-border-l2);\n  --dsc-ink:var(--dsw-alias-label-primary);\n  --dsc-soft:var(--dsw-alias-label-secondary);\n  --dsc-mute:var(--dsw-alias-label-tertiary);\n  --dsc-surface:var(--dsw-alias-bg-layer-1);\n  --dsc-surface-2:var(--dsw-alias-bg-layer-2);\n  --dsc-hover:var(--dsw-alias-interactive-bg-hover);\n  --dsc-accent:var(--dsw-alias-brand-primary);\n  --dsc-accent-ink:var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));\n  position:relative;\n  box-sizing:border-box;\n  width:100%;\n  max-width:860px;\n  margin:0 auto;\n  padding:26px 28px 20px;\n  color:var(--dsc-ink);\n  font:13px/1.55 var(--dsh-font-family,\"Segoe UI\",\"Microsoft YaHei\",system-ui,sans-serif);\n  container-type:inline-size;\n  animation:dsc-fade .16s ease-out;\n}\n.dsc *{box-sizing:border-box}\n.dsc h1,.dsc h2,.dsc h3,.dsc p,.dsc dl,.dsc dd,.dsc dt{margin:0}\n.dsc button,.dsc input,.dsc textarea{font:inherit;color:inherit}\n.dsc button,.dsc summary{cursor:pointer}\n.dsc button:disabled{opacity:.45;cursor:default}\n.dsc :focus-visible{outline:2px solid var(--dsc-accent-ink);outline-offset:2px}\n.dsc a{color:var(--dsw-alias-link,var(--dsc-accent));text-decoration:none}\n.dsc a:hover{text-decoration:underline}\n.dsc svg{flex:none;display:block}\n.dsc b,.dsc strong{font-variant-numeric:tabular-nums}\n\n/* ── header ─────────────────────────────────────────────── */\n.dsc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}\n.dsc-head-main{min-width:0}\n.dsc-head h1{font-size:15px;font-weight:600;letter-spacing:-.1px;line-height:1.4}\n.dsc-status{margin-top:2px;font-size:11px;color:var(--dsc-mute);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}\n.dsc-status.is-error{color:var(--dsw-alias-state-error-primary)}\n.dsc-actions{display:flex;align-items:center;gap:2px;flex:none;margin:-4px -6px 0 0}\n.dsc-icon-btn{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:var(--dsw-radius-sm,7px);background:transparent;color:var(--dsc-mute);transition:background .12s,color .12s}\n.dsc-icon-btn:hover:not(:disabled){background:var(--dsc-hover);color:var(--dsc-ink)}\n.dsc-icon-btn svg{width:15px;height:15px}\n.dsc-icon-btn .is-spinning{animation:dsc-spin .9s linear infinite}\n\n/* ── range selector ─────────────────────────────────────── */\n.dsc-scope{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-top:18px;border-bottom:1px solid var(--dsc-line)}\n.dsc-tabs{display:flex;align-items:stretch;gap:0;min-width:0;margin-bottom:-1px}\n.dsc-tab{position:relative;padding:0 12px 10px;border:0;background:none;color:var(--dsc-soft);font-size:12.5px;white-space:nowrap;transition:color .12s}\n.dsc-tab:first-child{padding-left:2px}\n.dsc-tab:hover{color:var(--dsc-ink)}\n.dsc-tab[aria-pressed=\"true\"]{color:var(--dsc-ink);font-weight:600}\n.dsc-tab[aria-pressed=\"true\"]::after{content:\"\";position:absolute;left:10px;right:10px;bottom:0;height:1.5px;border-radius:2px;background:var(--dsc-accent)}\n.dsc-tab:first-child[aria-pressed=\"true\"]::after{left:0}\n.dsc-month{display:flex;align-items:center;gap:7px;flex:none;padding-bottom:7px;font-size:11px;color:var(--dsc-mute)}\n.dsc-month input{height:22px;padding:0 4px;border:0;border-radius:var(--dsw-radius-sm,6px);background:transparent;color:var(--dsc-soft);font-size:11.5px;font-variant-numeric:tabular-nums}\n.dsc-month input:hover{background:var(--dsc-hover);color:var(--dsc-ink)}\n\n/* ── focal panel: scope total + trend ──────────────────── */\n.dsc-panel{position:relative;margin-top:18px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-lg,14px);background:linear-gradient(152deg,color-mix(in oklab,var(--dsc-accent) 6%,var(--dsc-surface)) 0%,var(--dsc-surface) 54%);overflow:hidden}\n.dsc-progress{position:absolute;top:0;left:0;right:0;height:2px;background:var(--dsc-line);z-index:1}\n.dsc-progress i{display:block;height:100%;background:var(--dsc-accent);transition:width .25s ease}\n.dsc-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;padding:21px 22px 18px}\n.dsc-hero-main{min-width:0}\n.dsc-eyebrow{font-size:11px;color:var(--dsc-mute);letter-spacing:.02em}\n.dsc-value{display:flex;align-items:baseline;gap:3px;margin-top:1px;min-width:0}\n.dsc-value .dsc-cur{font-size:20px;font-weight:500;color:var(--dsc-soft);line-height:1}\n.dsc-value b{font-size:40px;line-height:1.12;font-weight:600;letter-spacing:-1.6px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}\n.dsc-meta{display:flex;flex-wrap:wrap;gap:3px 16px;margin-top:7px;font-size:11.5px;color:var(--dsc-mute);font-variant-numeric:tabular-nums}\n.dsc-meta span{position:relative}\n.dsc-meta span+span::before{content:\"\";position:absolute;left:-9px;top:50%;width:2px;height:2px;margin-top:-1px;border-radius:50%;background:var(--dsc-line-2)}\n.dsc-meta b{font-weight:600;color:var(--dsc-soft)}\n.dsc-meta .is-warn b{color:var(--dsw-alias-state-warn-primary)}\n\n.dsc-rail{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:10px;min-width:148px;padding-left:22px;border-left:1px solid var(--dsc-line);text-align:right}\n.dsc-balance span{display:block;font-size:10.5px;color:var(--dsc-mute);letter-spacing:.02em}\n.dsc-balance strong{display:block;font-size:21px;font-weight:600;line-height:1.3;letter-spacing:-.4px;font-variant-numeric:tabular-nums}\n.dsc-balance small{display:block;margin-top:1px;font-size:10px;color:var(--dsc-mute);font-variant-numeric:tabular-nums}\n.dsc-rail-fact{display:flex;align-items:baseline;justify-content:space-between;gap:14px;width:100%;padding-top:9px;border-top:1px solid var(--dsc-line);font-size:10.5px;color:var(--dsc-mute)}\n.dsc-rail-fact b{font-weight:600;color:var(--dsc-soft);font-variant-numeric:tabular-nums}\n\n/* ── trend ─────────────────────────────────────────────── */\n.dsc-trend{padding:13px 22px 14px;border-top:1px solid var(--dsc-line);background:color-mix(in oklab,var(--dsc-surface-2) 42%,transparent)}\n.dsc-trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}\n.dsc-trend-head h2{font-size:11.5px;font-weight:600;letter-spacing:.02em}\n.dsc-trend-head p{font-size:10.5px;color:var(--dsc-mute);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.dsc-chart{display:flex;align-items:flex-end;gap:2px;height:66px;margin-top:9px}\n.dsc-col{position:relative;display:flex;flex:1;min-width:0;height:100%;flex-direction:column;justify-content:flex-end;border-radius:3px;transition:background .12s}\n.dsc-col:hover{background:color-mix(in oklab,var(--dsc-ink) 4%,transparent)}\n.dsc-col i{display:block;width:100%;border-radius:3px 3px 1px 1px;background:linear-gradient(180deg,var(--dsc-accent),color-mix(in oklab,var(--dsc-accent) 52%,transparent));opacity:.45;transition:opacity .12s}\n.dsc-col:hover i,.dsc-col.is-now i{opacity:.95}\n.dsc-col.is-now i{box-shadow:0 0 0 1px color-mix(in oklab,var(--dsc-accent) 30%,transparent)}\n.dsc-axis{display:flex;gap:2px;margin-top:5px}\n.dsc-axis span{flex:1;min-width:0;text-align:center;font-size:9px;line-height:1.2;color:var(--dsc-mute);font-variant-numeric:tabular-nums}\n.dsc-table-details{margin-top:9px;border-top:1px solid var(--dsc-line);padding-top:7px}\n.dsc-table-details>summary,.dsc-more>summary{list-style:none;display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--dsc-mute)}\n.dsc-table-details>summary::-webkit-details-marker,.dsc-more>summary::-webkit-details-marker{display:none}\n.dsc-table-details>summary::before,.dsc-more>summary::before{content:\"\\203a\";display:inline-block;font-size:12px;line-height:1;transition:transform .12s}\n.dsc-table-details[open]>summary::before,.dsc-more[open]>summary::before{transform:rotate(90deg)}\n.dsc-table-wrap{margin-top:7px;max-height:210px;overflow:auto;overscroll-behavior:contain}\n.dsc-table{width:100%;border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums}\n.dsc-table th,.dsc-table td{padding:3px 5px;text-align:right;border-bottom:1px solid var(--dsc-line)}\n.dsc-table th:first-child,.dsc-table td:first-child{text-align:left}\n.dsc-table th{position:sticky;top:0;background:var(--dsc-surface);color:var(--dsc-mute);font-weight:500}\n.dsc-table tbody tr:last-child td{border-bottom:0}\n\n/* ── notices ───────────────────────────────────────────── */\n.dsc-alerts{display:flex;flex-direction:column;gap:3px;margin-top:13px}\n.dsc-alert{position:relative;padding-left:11px;font-size:11px;line-height:1.6;color:var(--dsc-mute)}\n.dsc-alert::before{content:\"\";position:absolute;left:0;top:.62em;width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.8}\n.dsc-alert.is-error{color:var(--dsw-alias-state-error-primary)}\n.dsc-alert.is-warn{color:var(--dsw-alias-state-warn-primary)}\n\n/* ── section heading ───────────────────────────────────── */\n.dsc-section{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:24px 0 4px}\n.dsc-section h2{font-size:13px;font-weight:600;letter-spacing:-.1px}\n.dsc-section p{margin-top:1px;font-size:10.5px;color:var(--dsc-mute);font-variant-numeric:tabular-nums}\n.dsc-section strong{flex:none;font-size:15px;font-weight:600;letter-spacing:-.2px;font-variant-numeric:tabular-nums}\n\n/* ── model rows ────────────────────────────────────────── */\n.dsc-models{border-top:1px solid var(--dsc-line)}\n.dsc-model{border-bottom:1px solid var(--dsc-line)}\n.dsc-model-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto 14px;align-items:center;gap:2px 12px;padding:12px 3px 11px;list-style:none;border-radius:var(--dsw-radius-sm,6px);transition:background .12s}\n.dsc-model-row::-webkit-details-marker{display:none}\n.dsc-model-row:hover{background:var(--dsc-hover)}\n.dsc-model-tag{align-self:start;margin-top:2px;padding:2px 6px;border-radius:5px;background:var(--dsc-surface-2);color:var(--dsc-mute);font-size:9px;font-weight:600;letter-spacing:.08em;line-height:1.45;white-space:nowrap}\n.dsc-model-name{min-width:0}\n.dsc-model-name b{display:block;overflow:hidden;font-size:12.5px;font-weight:600;line-height:1.45;text-overflow:ellipsis;white-space:nowrap}\n.dsc-model-name small{display:block;overflow:hidden;font-size:10.5px;color:var(--dsc-mute);line-height:1.45;text-overflow:ellipsis;white-space:nowrap}\n.dsc-model-tokens{text-align:right}\n.dsc-model-tokens b{display:block;font-size:12px;font-weight:500;line-height:1.45;font-variant-numeric:tabular-nums}\n.dsc-model-tokens small{display:block;font-size:9px;letter-spacing:.05em;line-height:1.45;color:var(--dsc-mute);text-transform:uppercase}\n.dsc-model-cost{min-width:72px;text-align:right}\n.dsc-model-cost b{display:block;font-size:13px;font-weight:600;line-height:1.45;letter-spacing:-.1px;font-variant-numeric:tabular-nums}\n.dsc-model-cost small{display:block;font-size:10px;line-height:1.45;color:var(--dsc-mute);font-variant-numeric:tabular-nums}\n.dsc-chev{display:grid;place-items:center;color:var(--dsc-mute);transition:transform .15s,color .15s}\n.dsc-model-row:hover .dsc-chev{color:var(--dsc-soft)}\n.dsc-model[open] .dsc-chev{transform:rotate(90deg)}\n.dsc-share{grid-column:1/-1;height:2px;margin-top:7px;border-radius:2px;background:var(--dsc-line);overflow:hidden}\n.dsc-share i{display:block;height:100%;border-radius:2px;background:var(--dsc-accent);opacity:.4;transition:width .2s ease}\n.dsc-model-detail{padding:2px 3px 13px;animation:dsc-fade .14s ease-out}\n.dsc-buckets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 12px;padding:10px 12px;border-radius:var(--dsw-radius-sm,8px);background:color-mix(in oklab,var(--dsc-surface-2) 62%,transparent)}\n.dsc-bucket{min-width:0}\n.dsc-bucket span{display:block;font-size:10px;color:var(--dsc-mute);line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.dsc-bucket b{display:block;margin-top:1px;font-size:12px;font-weight:600;line-height:1.5;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}\n.dsc-bucket small{display:block;font-size:10px;line-height:1.5;color:var(--dsc-mute);font-variant-numeric:tabular-nums}\n\n/* ── empty ─────────────────────────────────────────────── */\n.dsc-empty{display:flex;flex-direction:column;align-items:center;gap:3px;padding:42px 16px 38px;text-align:center;color:var(--dsc-mute)}\n.dsc-empty svg{width:20px;height:20px;margin-bottom:5px;opacity:.55}\n.dsc-empty p{font-size:12px;font-weight:500;color:var(--dsc-soft)}\n.dsc-empty small{font-size:11px;color:var(--dsc-mute)}\n\n/* ── footer, rules, rate editor ────────────────────────── */\n.dsc-foot{margin-top:22px;padding-top:12px;border-top:1px solid var(--dsc-line);font-size:10.5px;color:var(--dsc-mute)}\n.dsc-foot-line{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-variant-numeric:tabular-nums}\n.dsc-more{margin-top:9px}\n.dsc-prose{margin-top:7px;font-size:10.5px;line-height:1.7;color:var(--dsc-mute)}\n.dsc-prose p+p{margin-top:4px}\n.dsc-rates{margin-top:12px;padding:12px 13px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-md,10px);background:var(--dsc-surface)}\n.dsc-rates-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}\n.dsc-rates-head h3{font-size:11.5px;font-weight:600}\n.dsc-rates-head span{font-size:10px;color:var(--dsc-mute)}\n.dsc-rates p{margin-top:3px;font-size:10.5px;line-height:1.65;color:var(--dsc-mute)}\n.dsc-rates textarea{width:100%;min-height:104px;margin:8px 0;padding:8px 9px;resize:vertical;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-sm,7px);background:var(--dsc-surface-2);font:11px/1.6 ui-monospace,Consolas,monospace}\n.dsc-rate-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}\n.dsc-btn{display:inline-flex;align-items:center;height:26px;padding:0 10px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-sm,7px);background:transparent;color:var(--dsc-soft);font-size:11.5px;white-space:nowrap}\n.dsc-btn:hover:not(:disabled){background:var(--dsc-hover);color:var(--dsc-ink)}\n.dsc-btn--primary{border-color:transparent;background:var(--dsc-accent);color:var(--dsw-alias-brand-primary-invert,#fff)}\n.dsc-btn--primary:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover,var(--dsc-accent));color:var(--dsw-alias-brand-primary-invert,#fff)}\n.dsc-rate-msg{font-size:10.5px;color:var(--dsc-mute)}\n\n/* ── composer dock pill ────────────────────────────────── */\n.dsc-anchor{display:inline-flex;min-width:0;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px))}\n.dsc-pill{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:1px 7px;border:0;border-radius:var(--dsw-radius-sm,6px);background:transparent;color:var(--dsw-alias-label-tertiary);font:inherit;line-height:inherit;font-variant-numeric:tabular-nums;white-space:nowrap;transition:background .12s,color .12s}\n.dsc-pill:hover,.dsc-pill[aria-expanded=\"true\"]{background:var(--dsc-hover,var(--dsw-alias-interactive-bg-hover));color:var(--dsw-alias-label-secondary)}\n.dsc-pill:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}\n.dsc-pill svg{width:13px;height:13px}\n.dsc-pill b{font-weight:500;color:var(--dsw-alias-label-secondary)}\n.dsc-pill i{font-style:normal;opacity:.45;margin:0 1px}\n.dsc-pill-sub{min-width:0;overflow:hidden;text-overflow:ellipsis;opacity:.85}\n\n/* ── anchored cost popover ─────────────────────────────── */\n/* Portaled to the body, so it declares the same token aliases as .dsc. */\n.dsc-pop{\n  --dsc-line:var(--dsw-alias-border-l1);\n  --dsc-line-2:var(--dsw-alias-border-l2);\n  --dsc-ink:var(--dsw-alias-label-primary);\n  --dsc-soft:var(--dsw-alias-label-secondary);\n  --dsc-mute:var(--dsw-alias-label-tertiary);\n  --dsc-hover:var(--dsw-alias-interactive-bg-hover);\n  --dsc-accent:var(--dsw-alias-brand-primary);\n  position:fixed;\n  z-index:1200;\n  box-sizing:border-box;\n  padding:12px 13px 10px;\n  overflow:auto;\n  overscroll-behavior:contain;\n  border:1px solid var(--dsc-line-2);\n  border-radius:var(--dsw-radius-lg,12px);\n  background:var(--dsw-alias-bg-overlay,var(--dsw-alias-bg-layer-1));\n  box-shadow:0 16px 40px rgb(0 0 0/.18),0 2px 8px rgb(0 0 0/.06);\n  color:var(--dsc-ink);\n  font:12px/1.5 var(--dsh-font-family,\"Segoe UI\",\"Microsoft YaHei\",system-ui,sans-serif);\n  animation:dsc-pop-in .14s ease-out;\n  cursor:default;\n}\n.dsc-pop:focus{outline:none}\n.dsc-pop *{box-sizing:border-box}\n.dsc-pop :focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsc-accent));outline-offset:2px}\n.dsc-pop-body{min-width:0}\n.dsc-pop-head{display:flex;align-items:center;justify-content:space-between;gap:12px}\n.dsc-pop-title{display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:12px;font-weight:600;line-height:1.5;white-space:nowrap}\n.dsc-pop-title svg{color:var(--dsc-mute)}\n.dsc-pop-cost{flex:none;font-size:17px;font-weight:600;letter-spacing:-.4px;font-variant-numeric:tabular-nums;white-space:nowrap}\n.dsc-pop-sub{display:flex;align-items:center;gap:5px;margin-top:1px;font-size:10.5px;color:var(--dsc-mute);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden}\n.dsc-pop-sub span{min-width:0;overflow:hidden;text-overflow:ellipsis}\n.dsc-pop-sub i{font-style:normal;opacity:.45}\n.dsc-pop-rule{height:1px;margin:9px 0 6px;background:var(--dsc-line)}\n.dsc-pop-rows{display:flex;flex-direction:column}\n.dsc-pop-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:10px;padding:2px 0;font-size:11px}\n.dsc-pop-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsc-mute)}\n.dsc-pop-row>b{font-weight:500;color:var(--dsc-soft);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}\n.dsc-pop-row>small{min-width:54px;font-size:10.5px;font-weight:500;color:var(--dsc-ink);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}\n.dsc-pop-note{margin:5px 0 0;font-size:10px;line-height:1.5;color:var(--dsw-alias-state-warn-primary)}\n.dsc-pop-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px;font-size:10px;color:var(--dsc-mute);font-variant-numeric:tabular-nums}\n.dsc-pop-foot>span{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}\n.dsc-pop-foot b{font-weight:500;color:var(--dsc-soft)}\n.dsc-pop-foot i{font-style:normal;opacity:.45}\n.dsc-pop-refresh{display:grid;place-items:center;flex:none;width:22px;height:22px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsc-mute);cursor:pointer}\n.dsc-pop-refresh:hover:not(:disabled){background:var(--dsc-hover);color:var(--dsc-ink)}\n.dsc-pop-refresh:disabled{opacity:.45;cursor:default}\n.dsc-pop-refresh svg{width:13px;height:13px}\n.dsc-pop-refresh .is-spinning{animation:dsc-spin .9s linear infinite}\n\n@keyframes dsc-fade{from{opacity:0}to{opacity:1}}\n@keyframes dsc-pop-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}\n@keyframes dsc-spin{to{transform:rotate(360deg)}}\n\n/* ── responsive ────────────────────────────────────────── */\n@container(max-width:640px){\n  .dsc-scope{margin-top:14px}\n  .dsc-tab{padding:0 9px 9px}\n  .dsc-tab:first-child{padding-left:0}\n  .dsc-hero{grid-template-columns:1fr;gap:13px;padding:18px 16px 15px}\n  .dsc-value b{font-size:33px;letter-spacing:-1.2px}\n  .dsc-value .dsc-cur{font-size:17px}\n  .dsc-rail{align-items:center;flex-direction:row;justify-content:space-between;gap:14px;min-width:0;padding:10px 0 0;border-left:0;border-top:1px solid var(--dsc-line);text-align:left}\n  .dsc-balance strong{font-size:18px}\n  .dsc-rail-fact{width:auto;padding-top:0;border-top:0;justify-content:flex-end}\n  .dsc-trend{padding:12px 16px 13px}\n  .dsc-buckets{grid-template-columns:repeat(2,minmax(0,1fr))}\n  .dsc-section{margin-top:20px}\n}\n@container(max-width:460px){\n  .dsc-model-row{grid-template-columns:auto minmax(0,1fr) auto 14px}\n  .dsc-model-tokens{display:none}\n  .dsc-model-cost{min-width:64px}\n  .dsc-month span{display:none}\n  .dsc-foot-line{justify-content:flex-start}\n}\n@media(max-width:600px){\n  .dsc{padding:20px 16px 16px}\n  .dsc-pill-sub,.dsc-pill i{display:none}\n}\n@media(prefers-reduced-motion:reduce){\n  .dsc,.dsc *,.dsc-pop,.dsc-pop *{animation:none!important;transition:none!important}\n}\n@media(forced-colors:active){\n  .dsc-panel,.dsc-model-tag,.dsc-buckets,.dsc-rates,.dsc-btn,.dsc-pop,.dsc-pop-refresh{border:1px solid CanvasText}\n  .dsc-col i,.dsc-share i,.dsc-progress i,.dsc-tab[aria-pressed=\"true\"]::after{background:Highlight}\n}\n";
 
-    const NS='session-cost';
-    const DASH='\u2014';
+    const NS='session-cost', DASH='\u2014';
+    let popoverSeq=0;
 
     //#region formatting
-    const money=n=>{
-      if(!Number.isFinite(n)) return DASH;
-      if(n>0&&n<1) return '\u00a5'+n.toFixed(4);
-      return '\u00a5'+n.toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
-    };
-    const balanceMoney=(n,currency)=>currency==='CNY'?money(n):new Intl.NumberFormat('zh-CN',{style:'currency',currency,maximumFractionDigits:4}).format(n);
+    const pad=n=>String(n).padStart(2,'0');
     const count=n=>Number.isFinite(n)?n.toLocaleString('zh-CN'):DASH;
+    const amount=n=>{
+      if(!Number.isFinite(n))return DASH;
+      if(n>0&&n<1)return n.toFixed(4);
+      return n.toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
+    };
+    const money=n=>Number.isFinite(n)?'\u00a5'+amount(n):DASH;
     const compact=n=>Number.isFinite(n)?new Intl.NumberFormat('en',{notation:'compact',maximumFractionDigits:1}).format(n):DASH;
     const pct=n=>Number.isFinite(n)?(n*100).toFixed(1)+'%':DASH;
-    const clock=t=>t?new Date(t).toLocaleTimeString('zh-CN',{hour12:false}):DASH;
+    const cacheHit=summary=>summary&&summary.input+summary.cacheRead+summary.cacheWrite>0?pct(summary.cacheRate):DASH;
+    const balanceMoney=(n,currency)=>currency==='CNY'?money(n):new Intl.NumberFormat('zh-CN',{style:'currency',currency,maximumFractionDigits:4}).format(n);
+    // Accounting is anchored to Beijing time; display follows the same clock so
+    // the numbers match the day/peak boundaries no matter where the app runs.
+    const beijing=time=>new Date(time+8*3600000);
+    const clock=time=>time?pad(beijing(time).getUTCHours())+':'+pad(beijing(time).getUTCMinutes()):DASH;
+    const daysInMonth=key=>new Date(Date.UTC(Number(key.slice(0,4)),Number(key.slice(5,7)),0)).getUTCDate();
     //#endregion
 
     //#region icons
-    const Svg=({children,...rest})=>h('svg',{viewBox:'0 0 24 24',width:16,height:16,fill:'none','aria-hidden':true,stroke:'currentColor',strokeWidth:1.6,strokeLinecap:'round',strokeLinejoin:'round',...rest},children);
-    const IconCost=()=>h(Svg,null,h('rect',{x:2.6,y:6.2,width:18.8,height:13.4,rx:3}),h('path',{d:'M2.6 10.4h18.8'}),h('circle',{cx:17.2,cy:14.6,r:1.3,fill:'currentColor',stroke:'none'}));
-    const IconRefresh=()=>h(Svg,null,h('path',{d:'M20 11a8 8 0 1 0-.6 4.2'}),h('path',{d:'M20 4.6V11h-6.4'}));
-    const IconDownload=()=>h(Svg,null,h('path',{d:'M12 3.8v10.6'}),h('path',{d:'M7.8 10.6 12 14.8l4.2-4.2'}),h('path',{d:'M4.4 19.2h15.2'}));
-    const IconEmpty=()=>h(Svg,{width:22,height:22},h('rect',{x:2.8,y:6.4,width:18.4,height:12.8,rx:3}),h('path',{d:'M7 11.6h10M7 14.8h6'}));
+    const Svg=({size=14,children,...rest})=>h('svg',{viewBox:'0 0 24 24',width:size,height:size,fill:'none','aria-hidden':true,stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round',strokeLinejoin:'round',...rest},children);
+    const IconCost=props=>h(Svg,props,h('rect',{x:2.7,y:6.2,width:18.6,height:13.3,rx:3}),h('path',{d:'M2.7 10.5h18.6'}),h('circle',{cx:17.1,cy:14.6,r:1.25,fill:'currentColor',stroke:'none'}));
+    const IconRefresh=props=>h(Svg,props,h('path',{d:'M20 11.2a8 8 0 1 0-.35 3.3'}),h('path',{d:'M20 4.6v6.6h-6.6'}));
+    const IconDownload=props=>h(Svg,props,h('path',{d:'M12 4v10.4'}),h('path',{d:'M7.9 10.5 12 14.6l4.1-4.1'}),h('path',{d:'M4.8 19.2h14.4'}));
+    const IconChevron=props=>h(Svg,props,h('path',{d:'m9.2 5.6 6.2 6.4-6.2 6.4'}));
+    const IconEmpty=props=>h(Svg,{size:20,...props},h('path',{d:'M4 19V9.5M9.3 19V5M14.7 19v-6.5M20 19V8'}),h('path',{d:'M3 19h18'}));
     //#endregion
 
     //#region ledger
     function createLedger(remote) {
-      let state={records:[],failures:[],sessions:0,updatedAt:0,rates:{},status:'idle',progress:''}, active, controller;
-      const listeners=new Set(),cache=new Map();
-      const publish=patch=>{state={...state,...patch};for(const fn of listeners)fn();};
+      let state={records:[],failures:[],sessions:0,updatedAt:0,rates:{},status:'idle',progress:null,error:undefined};
+      let active, busy=false, controller, timer, soon, trailing=false;
+      const listeners=new Set(), cache=new Map(), summaries=new Map();
+      const publish=(patch,resetSummaries=true)=>{
+        state={...state,...patch};
+        if(resetSummaries)summaries.clear();
+        for(const fn of listeners)fn();
+      };
+      const refresh=()=>{
+        if(active)return active;
+        if(soon){clearTimeout(soon);soon=undefined;}
+        trailing=false;
+        controller=new AbortController();
+        busy=true;
+        // Status-only update: records and rates are unchanged, so keep the
+        // folded summaries and let the panel render at once.
+        publish({status:'loading',error:undefined,progress:null},false);
+        let reportedAt=0;
+        // A large ledger reports once per session; keep the progress text live
+        // without re-rendering the whole dashboard on every completed read.
+        const report=(done,total)=>{
+          const now=Date.now();
+          if(done<total&&now-reportedAt<150)return;
+          reportedAt=now;
+          publish({progress:{done,total}},false);
+        };
+        active=loadLedger(remote,{cache,signal:controller.signal,progress:report})
+          .then(result=>publish({...result,status:'ready',progress:null}))
+          .catch(error=>{if(!controller.signal.aborted)publish({status:'error',error:error.message,progress:null});})
+          .finally(()=>{
+            busy=false;active=undefined;
+            // Tokens that arrived during the scan are not in its snapshot; run
+            // one quiet trailing scan instead of waiting for the minute timer.
+            if(trailing){trailing=false;if(listeners.size>0)refreshSoon(2000);}
+          });
+        return active;
+      };
+      // Streaming tokens arrive far faster than a full ledger read; coalesce
+      // them into one trailing refresh instead of starting a scan per chunk.
+      const refreshSoon=(delay=1500)=>{
+        if(busy){trailing=true;return;}
+        if(soon)return;
+        soon=setTimeout(()=>{soon=undefined;void refresh();},delay);
+      };
+      const tick=()=>{if(document.visibilityState!=='hidden')void refresh();};
+      const onVisible=()=>{if(document.visibilityState==='visible')void refresh();};
       return {
-        setRates:rates=>publish({rates}),summary:options=>summarize(state.records,options,state.rates),
-        subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);},getSnapshot:()=>state,
-        refresh() {
-          if(active)return active;
-          controller=new AbortController(); publish({status:'loading',error:undefined});
-          active=loadLedger(remote,{cache,signal:controller.signal,progress:(done,total)=>publish({progress:`${done} / ${total}`})})
-            .then(result=>publish({...result,status:'ready',progress:''}))
-            .catch(error=>{if(!controller.signal.aborted)publish({status:'error',error:error.message});})
-            .finally(()=>{active=undefined;});
-          return active;
+        setRates:rates=>publish({rates}),
+        // One folded summary per filter, reused across the hero, chart, table and
+        // dock until the ledger or the rates actually change.
+        summary:options=>{
+          const key=JSON.stringify(options??{});
+          let result=summaries.get(key);
+          if(!result){result=summarize(state.records,options,state.rates);summaries.set(key,result);}
+          return result;
         },
-        dispose(){controller?.abort();listeners.clear();cache.clear();},
+        subscribe(fn){
+          listeners.add(fn);
+          if(listeners.size===1){timer=setInterval(tick,60000);document.addEventListener('visibilitychange',onVisible);}
+          return ()=>{
+            listeners.delete(fn);
+            if(listeners.size===0){clearInterval(timer);timer=undefined;document.removeEventListener('visibilitychange',onVisible);}
+          };
+        },
+        getSnapshot:()=>state,
+        refresh,refreshSoon,
+        dispose(){
+          controller?.abort();
+          trailing=false;
+          if(soon)clearTimeout(soon);
+          if(timer){clearInterval(timer);timer=undefined;}
+          document.removeEventListener('visibilitychange',onVisible);
+          listeners.clear();cache.clear();summaries.clear();
+        },
       };
     }
-    function useLedger(ledger) {
+    function useLedger(ledger,maxAge=0) {
       const state=React.useSyncExternalStore(ledger.subscribe,ledger.getSnapshot,ledger.getSnapshot);
-      React.useEffect(()=>{if(!ledger.getSnapshot().updatedAt)void ledger.refresh();const timer=setInterval(()=>{if(document.visibilityState!=='hidden')void ledger.refresh();},60000);return()=>clearInterval(timer);},[ledger]);
+      // Opening the full panel is an explicit request for current numbers; the
+      // small popover accepts a few seconds of cache instead of rescanning.
+      React.useEffect(()=>{
+        const updatedAt=ledger.getSnapshot().updatedAt;
+        if(!updatedAt||maxAge===0||Date.now()-updatedAt>maxAge)void ledger.refresh();
+      },[ledger,maxAge]);
       return state;
     }
     //#endregion
@@ -269,15 +361,15 @@ function normalizeBalance(result) {
       const generation=React.useRef(0);
       const load=React.useCallback(()=>{
         const request=++generation.current;
-        setState(current=>current.status==='ready'?{...current,stale:true}:{status:'loading'});
+        setState(current=>current.status==='ready'?{...current,stale:false}:{status:'loading'});
         Promise.resolve().then(()=>readAccountBalance())
-          .then(body=>{if(request===generation.current)setState({status:'ready',body,at:Date.now()});})
-          .catch(()=>{if(request===generation.current)setState({status:'error'});});
+          .then(body=>{if(request===generation.current)setState({status:'ready',body});})
+          .catch(()=>{if(request===generation.current)setState(current=>current.status==='ready'?{...current,stale:true}:{status:'error'});});
       },[readAccountBalance]);
       React.useEffect(()=>{
-        load();
-        const timer=setInterval(()=>{if(document.visibilityState!=='hidden')load();},120000);
-        return()=>{clearInterval(timer);generation.current++;};
+        void load();
+        const timer=setInterval(()=>{if(document.visibilityState!=='hidden')void load();},120000);
+        return ()=>{clearInterval(timer);generation.current++;};
       },[load]);
       return [state,load];
     }
@@ -287,271 +379,414 @@ function normalizeBalance(result) {
       const info=body.infos.find(entry=>entry.currency==='CNY')??body.infos[0];
       const total=Number(info.totalBalance), granted=Number(info.grantedBalance), topped=Number(info.toppedUpBalance);
       if(!Number.isFinite(total))return undefined;
-      return {currency:info.currency??'CNY',total,granted:Number.isFinite(granted)?granted:0,topped:Number.isFinite(topped)?topped:0,available:body.available!==false};
+      return {currency:info.currency??'CNY',total,granted:Number.isFinite(granted)?granted:0,topped:Number.isFinite(topped)?topped:0};
+    }
+    //#endregion
+
+    //#region primitives
+    function IconButton({label,onClick,disabled,className='',children}) {
+      return h('button',{type:'button',className:`dsc-icon-btn ${className}`.trim(),title:label,'aria-label':label,onClick,disabled},children);
+    }
+
+    function Trend({kind,points,truncated}) {
+      const peak=points.reduce((best,point)=>point.cost>best.cost?point:best,{cost:0});
+      const max=Math.max(peak.cost,.000001);
+      const axisEvery=kind==='hour'?6:Math.max(1,Math.ceil(points.length/6));
+      const caption=peak.cost>0
+        ? `${truncated?'\u6700\u8fd1 60 \u5929 \u00b7 ':''}\u5cf0\u503c ${kind==='hour'?`${pad(peak.slot)}:00`:shortDay(peak.key)} \u00b7 ${money(peak.cost)}`
+        : '\u6682\u65e0\u6d88\u8d39';
+      return h('div',{className:'dsc-trend'},
+        h('div',{className:'dsc-trend-head'},
+          h('h2',null,kind==='hour'?'\u5206\u65f6\u6d88\u8d39':'\u6bcf\u65e5\u6d88\u8d39'),
+          h('p',null,caption)),
+        h('div',{className:'dsc-chart',role:'img','aria-label':kind==='hour'?'\u5206\u65f6\u6d88\u8d39\u56fe':'\u6bcf\u65e5\u6d88\u8d39\u56fe'},points.map(point=>
+          h('div',{className:'dsc-col'+(point.now?' is-now':''),key:point.key,title:`${point.title} \u00b7 ${money(point.cost)} \u00b7 ${count(point.tokens)} tokens \u00b7 ${count(point.calls)} \u6b21`},
+            h('i',{style:{height:`${point.cost?Math.max(2,point.cost/max*100):0}%`}})))),
+        h('div',{className:'dsc-axis','aria-hidden':'true'},points.map((point,index)=>
+          h('span',{key:point.key},index%axisEvery===0?point.axis:'\u00a0'))),
+        h('details',{className:'dsc-table-details'},
+          h('summary',null,kind==='hour'?'\u9010\u65f6\u660e\u7ec6':'\u9010\u65e5\u660e\u7ec6'),
+          h('div',{className:'dsc-table-wrap'},h('table',{className:'dsc-table'},
+            h('thead',null,h('tr',null,['\u65f6\u6bb5','\u6d88\u8d39','Tokens','\u8c03\u7528'].map(key=>h('th',{key},key)))),
+            h('tbody',null,points.map(point=>h('tr',{key:point.key},
+              h('td',null,kind==='hour'?`${pad(point.slot)}:00`:point.key),
+              h('td',null,money(point.cost)),
+              h('td',null,count(point.tokens)),
+              h('td',null,count(point.calls)))))))));
+    }
+
+    // A small anchored surface, never a full-screen modal. It portals to the
+    // body because the docked composer clips fixed descendants.
+    function Popover({id,anchorRef,label,onClose,children}) {
+      const panel=React.useRef(null);
+      const focused=React.useRef(false);
+      const skipRestore=React.useRef(false);
+      const close=React.useRef(onClose);
+      close.current=onClose;
+      const [position,setPosition]=React.useState(null);
+      React.useLayoutEffect(()=>{
+        const place=()=>{
+          const rect=anchorRef.current?.getBoundingClientRect();
+          if(!rect)return;
+          const width=Math.min(320,window.innerWidth-24);
+          const left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12));
+          const above=rect.top-12;
+          const next=above>=220
+            ?{left,width,bottom:window.innerHeight-rect.top+8,maxHeight:Math.max(200,above-8)}
+            :{left,width,top:rect.bottom+8,maxHeight:Math.max(200,window.innerHeight-rect.bottom-20)};
+          setPosition(current=>current&&['left','width','bottom','top','maxHeight'].every(key=>current[key]===next[key])?current:next);
+        };
+        place();
+        window.addEventListener('resize',place);
+        window.addEventListener('scroll',place,true);
+        const observer=typeof ResizeObserver==='function'?new ResizeObserver(place):null;
+        if(observer&&anchorRef.current)observer.observe(anchorRef.current);
+        return ()=>{
+          window.removeEventListener('resize',place);
+          window.removeEventListener('scroll',place,true);
+          observer?.disconnect();
+        };
+      },[anchorRef]);
+      React.useEffect(()=>{
+        const previous=document.activeElement;
+        const onDown=event=>{
+          if(panel.current?.contains(event.target))return;
+          if(anchorRef.current?.contains(event.target))return;
+          skipRestore.current=true;
+          close.current();
+        };
+        const onKey=event=>{if(event.key==='Escape'){event.preventDefault();close.current();}};
+        document.addEventListener('pointerdown',onDown,true);
+        document.addEventListener('keydown',onKey);
+        return ()=>{
+          document.removeEventListener('pointerdown',onDown,true);
+          document.removeEventListener('keydown',onKey);
+          if(!skipRestore.current)previous?.focus?.();
+        };
+      },[anchorRef]);
+      React.useEffect(()=>{
+        if(position&&!focused.current){focused.current=true;panel.current?.focus();}
+      },[position]);
+      if(!position)return null;
+      const body=h('div',{className:'dsc-pop',id,role:'dialog','aria-label':label,tabIndex:-1,ref:panel,
+        onBlur:event=>{
+          if(event.currentTarget.contains(event.relatedTarget))return;
+          if(event.relatedTarget&&anchorRef.current?.contains(event.relatedTarget))return;
+          skipRestore.current=true;
+          close.current();
+        },
+        style:{left:position.left,width:position.width,maxHeight:position.maxHeight,...(position.bottom!==undefined?{bottom:position.bottom}:{top:position.top})}},children);
+      return portal?portal(body,document.body):body;
     }
     //#endregion
 
     //#region dashboard
-    function Stat({label,value,note}) {
-      return h('div',{className:'dsc-stat'},h('span',null,label),h('strong',null,value),note?h('small',null,note):null);
-    }
+    const RANGE_LABEL={today:'\u4eca\u65e5\u6d88\u8d39',month:'\u672c\u6708\u6d88\u8d39',all:'\u7d2f\u8ba1\u6d88\u8d39',session:'\u672c\u4f1a\u8bdd\u6d88\u8d39'};
 
-    function ModelCard({model,total,unpriced}) {
-      const pro=/pro/i.test(model.model??'');
+    function ModelRow({model,total}) {
+      const name=(model.model??'').toLowerCase();
+      const tag=/pro/.test(name)?'PRO':/flash/.test(name)?'FLASH':'MODEL';
       const share=total>0?model.cost/total:0;
-      return h('article',{className:'dsc-model'},
-        h('div',{className:'dsc-model-head'},
-          h('div',{className:'dsc-model-id'},
-            h('span',{className:'dsc-badge'},pro?'PRO':'FLS'),
-            h('div',null,h('h3',null,model.model),h('small',null,`${model.provider} \u00b7 ${count(model.calls)} \u6b21\u8c03\u7528`)),
-          ),
-          h('div',{className:'dsc-model-cost'},
-            h('strong',null,unpriced?DASH:money(model.cost)),
-            h('small',null,total>0?`${pct(share)} \u5360\u6bd4`:unpriced?'\u5f85\u8ba1\u4ef7':'\u2014'),
-          ),
-        ),
-        h('div',{className:'dsc-bar','aria-hidden':true},h('i',{style:{width:`${total>0?Math.max(2,share*100):0}%`}})),
-        h('dl',{className:'dsc-buckets'},[
-          ['input','\u672a\u7f13\u5b58\u8f93\u5165'],
-          ['cacheRead','\u7f13\u5b58\u8bfb\u53d6'],
-          ['cacheWrite','\u7f13\u5b58\u5199\u5165'],
-          ['output','\u8f93\u51fa'],
-        ].map(([key,label])=>h('div',{key,className:'dsc-bucket'},
-          h('dt',null,label),
-          h('dd',null,compact(model[key]),h('small',null,money(model.costs?.[key]??0))),
-        ))),
-      );
+      const pending=(model.unpriced??0)+(model.invalid??0);
+      const cost=pending>=model.calls?DASH:money(model.cost);
+      return h('details',{className:'dsc-model'},
+        h('summary',{className:'dsc-model-row'},
+          h('span',{className:'dsc-model-tag'},tag),
+          h('span',{className:'dsc-model-name'},
+            h('b',null,model.model),
+            h('small',null,`${model.provider} \u00b7 ${count(model.calls)} \u6b21\u8c03\u7528`)),
+          h('span',{className:'dsc-model-tokens'},
+            h('b',null,compact(model.totalTokens)),
+            h('small',null,'tokens')),
+          h('span',{className:'dsc-model-cost'},
+            h('b',null,cost),
+            h('small',null,model.cost>0?pct(share):(model.invalid>0?'\u7528\u91cf\u4e0d\u5168':pending?'\u5f85\u8ba1\u4ef7':'\u2014'))),
+          h('span',{className:'dsc-chev'},h(IconChevron,{size:12})),
+          h('span',{className:'dsc-share','aria-hidden':'true'},h('i',{style:{width:`${Math.max(0,Math.min(100,share*100))}%`}}))),
+        h('div',{className:'dsc-model-detail'},
+          h('div',{className:'dsc-buckets'},[
+            ['input','\u672a\u7f13\u5b58\u8f93\u5165'],
+            ['cacheRead','\u7f13\u5b58\u8bfb\u53d6'],
+            ['cacheWrite','\u7f13\u5b58\u5199\u5165'],
+            ['output','\u8f93\u51fa'],
+          ].map(([key,label])=>h('div',{className:'dsc-bucket',key},
+            h('span',null,label),
+            h('b',null,compact(model[key])),
+            h('small',null,money(model.costs?.[key]??0)))))));
     }
 
-    function WebCard({web}) {
-      return h('article',{className:'dsc-model dsc-model--web'},
-        h('div',{className:'dsc-model-head'},
-          h('div',{className:'dsc-model-id'},
-            h('span',{className:'dsc-badge'},'WEB'),
-            h('div',null,
-              h('h3',null,'\u7f51\u9875\u641c\u7d22\u4e0e\u6293\u53d6'),
-              h('small',null,`\u641c\u7d22 ${count(web.search)} \u6b21 \u00b7 \u6293\u53d6 ${count(web.fetch)} \u6b21`)),
-          ),
-          h('div',{className:'dsc-model-cost'},
-            h('strong',null,money(web.cost)),
-            h('small',null,'\u00a50.005 / \u6b21')),
-        ),
-      );
+    function WebRow({web,total}) {
+      const share=total>0?web.cost/total:0;
+      return h('details',{className:'dsc-model'},
+        h('summary',{className:'dsc-model-row'},
+          h('span',{className:'dsc-model-tag'},'WEB'),
+          h('span',{className:'dsc-model-name'},
+            h('b',null,'\u7f51\u9875\u68c0\u7d22'),
+            h('small',null,`\u641c\u7d22 ${count(web.search)} \u6b21 \u00b7 \u6293\u53d6 ${count(web.fetch)} \u6b21`)),
+          h('span',{className:'dsc-model-tokens'},
+            h('b',null,count(web.requests)),
+            h('small',null,'\u6b21')),
+          h('span',{className:'dsc-model-cost'},
+            h('b',null,money(web.cost)),
+            h('small',null,total>0?pct(share):'\u2014')),
+          h('span',{className:'dsc-chev'},h(IconChevron,{size:12})),
+          h('span',{className:'dsc-share','aria-hidden':'true'},h('i',{style:{width:`${Math.max(0,Math.min(100,share*100))}%`}}))),
+        h('div',{className:'dsc-model-detail'},
+          h('div',{className:'dsc-buckets'},
+            h('div',{className:'dsc-bucket'},h('span',null,'\u641c\u7d22'),h('b',null,count(web.search)),h('small',null,money(web.search*WEB_PRICE.search))),
+            h('div',{className:'dsc-bucket'},h('span',null,'\u6293\u53d6'),h('b',null,count(web.fetch)),h('small',null,money(web.fetch*WEB_PRICE.fetch))),
+            h('div',{className:'dsc-bucket'},h('span',null,'\u5408\u8ba1'),h('b',null,count(web.requests)),h('small',null,money(web.cost))),
+            h('div',{className:'dsc-bucket'},h('span',null,'\u5355\u4ef7'),h('b',null,'\u00a50.005'),h('small',null,'\u6bcf\u6b21\u6210\u529f\u8bf7\u6c42')))));
     }
+    //#endregion
 
-    function Dashboard({ledger,sessionId,onClose,rateForm,readAccountBalance}) {
+    //#region screen
+    function Dashboard({ledger,sessionId,rateForm,readAccountBalance}) {
       const state=useLedger(ledger);
       const [period,setPeriod]=React.useState('today');
-      const [month,setMonth]=React.useState(dateKey(Date.now()).slice(0,7));
+      const [month,setMonth]=React.useState(()=>dateKey(Date.now()).slice(0,7));
       const [rateText,setRateText]=React.useState(null);
       const [rateMessage,setRateMessage]=React.useState('');
       const [balanceState,refreshBalance]=useBalance(readAccountBalance);
 
       const today=dateKey(Date.now()), currentMonth=today.slice(0,7);
-      const todaySummary=ledger.summary({day:today});
       const monthSummary=ledger.summary({month:currentMonth});
+      const railFact=period==='month'?['\u5168\u90e8\u7d2f\u8ba1',ledger.summary({}).cost]:['\u672c\u6708\u7d2f\u8ba1',monthSummary.cost];
       const summary=ledger.summary(period==='today'?{day:today}:period==='month'?{month}:period==='session'?{sessionId}:{});
       const balance=readBalance(balanceState);
-      const loading=state.status==='loading', unavailable=!state.updatedAt;
-      const unpriced=summary.unpriced+summary.invalid;
+      const loading=state.status==='loading';
+      const unavailable=!state.updatedAt;
+      const pending=summary.unpriced+summary.invalid;
 
-      const monthDays=new Date(Number(month.slice(0,4)),Number(month.slice(5)),0).getDate();
-      const daily=Array.from({length:monthDays},(_,i)=>ledger.summary({day:`${month}-${String(i+1).padStart(2,'0')}`}));
-      const peak=Math.max(...daily.map(day=>day.cost),.00001);
-      const hourly=Array.from({length:24},(_,hour)=>ledger.summary({day:today,hour}));
-      const hourPeak=Math.max(...hourly.map(slot=>slot.cost),.00001);
+      const chart=React.useMemo(()=>{
+        const currentHour=beijing(Date.now()).getUTCHours();
+        const hourly=key=>Array.from({length:24},(_,slot)=>{
+          const value=ledger.summary({day:key,hour:slot});
+          return {key:`${key}:${slot}`,slot,axis:pad(slot),title:`${key} ${pad(slot)}:00`,cost:value.cost,calls:value.calls,tokens:value.totalTokens,now:key===today&&slot===currentHour};
+        });
+        if(period==='today')return {kind:'hour',points:hourly(today),truncated:false};
+        if(period==='month'){
+          // A current month ends today; past months show their full calendar.
+          const length=month===currentMonth?Number(today.slice(8,10)):daysInMonth(month);
+          return {kind:'day',truncated:false,points:Array.from({length},(_,index)=>{
+            const key=`${month}-${pad(index+1)}`, value=ledger.summary({day:key});
+            return {key,axis:String(index+1),title:key,cost:value.cost,calls:value.calls,tokens:value.totalTokens,now:key===today};
+          })};
+        }
+        if(summary.days.length===0)return {kind:'day',points:[],truncated:false};
+        if(summary.days.length===1)return {kind:'hour',points:hourly(summary.days[0].day),truncated:false};
+        const window=dailyWindow(summary.days.map(entry=>entry.day));
+        return {kind:'day',truncated:window.truncated,points:window.days.map(key=>{
+          const value=ledger.summary({day:key});
+          return {key,axis:dayAxis(key),title:key,cost:value.cost,calls:value.calls,tokens:value.totalTokens,now:key===today};
+        })};
+      },[period,month,currentMonth,today,summary,ledger]);
+
+      const eyebrow=period==='today'?`${RANGE_LABEL.today} \u00b7 ${dayText(today)}`
+        :period==='month'?`${month===currentMonth?RANGE_LABEL.month:'\u6708\u5ea6\u6d88\u8d39'} \u00b7 ${monthText(month)}`
+        :period==='session'?`${RANGE_LABEL.session} \u00b7 \u5f53\u524d\u4f1a\u8bdd`
+        :`${RANGE_LABEL.all} \u00b7 \u5168\u90e8\u65f6\u95f4`;
+
+      const rangeTabs=[['today','\u4eca\u65e5'],['month','\u6708\u5ea6'],['all','\u5168\u90e8'],...(sessionId?[['session','\u672c\u4f1a\u8bdd']]:[])];
+      const ratio=state.progress&&state.progress.total?state.progress.done/state.progress.total:null;
+      const statusText=state.status==='error'?(state.updatedAt?'\u66f4\u65b0\u5931\u8d25\uff0c\u663e\u793a\u4e0a\u6b21\u7edf\u8ba1':'\u66f4\u65b0\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u8fde\u63a5')
+        :loading?(state.progress?`\u6b63\u5728\u8bfb\u53d6\u4f1a\u8bdd ${state.progress.done} / ${state.progress.total}`:'\u6b63\u5728\u8bfb\u53d6\u672c\u5730\u4f1a\u8bdd')
+        :state.updatedAt?`\u66f4\u65b0\u4e8e ${clock(state.updatedAt)} \u00b7 \u5df2\u8bfb\u53d6 ${count(state.sessions-state.failures.length)}/${count(state.sessions)} \u4e2a\u4f1a\u8bdd`
+        :'\u4ec5\u8bfb\u53d6\u4f60\u6709\u6743\u8bbf\u95ee\u7684\u4f1a\u8bdd';
+
+      const balanceNote=balance
+        ?`${balanceState.stale?'\u66f4\u65b0\u5931\u8d25\uff0c\u4e3a\u4e0a\u6b21\u7ed3\u679c \u00b7 ':''}\u5145\u503c ${balanceMoney(balance.topped,balance.currency)} \u00b7 \u8d60\u9001 ${balanceMoney(balance.granted,balance.currency)}`
+        :balanceState.status==='loading'?'\u6b63\u5728\u67e5\u8be2\u4f59\u989d'
+        :balanceState.body?.reason==='unconfigured'?'\u672a\u767b\u5f55 Harness \u8d26\u6237'
+        :'\u4f59\u989d\u67e5\u8be2\u5931\u8d25';
 
       const exportData=()=>{
         const url=URL.createObjectURL(new Blob([toCSV(summary)],{type:'text/csv;charset=utf-8'}));
         const anchor=document.createElement('a');
         anchor.href=url;
         anchor.download=`deepseek-usage-${period==='month'?month:period==='today'?today:period}.csv`;
-        anchor.click();
+        document.body.appendChild(anchor);anchor.click();anchor.remove();
         setTimeout(()=>URL.revokeObjectURL(url),1000);
       };
 
-      const tabs=[['today','\u4eca\u65e5'],['month','\u672c\u6708'],['all','\u5168\u90e8'],...(sessionId?[['session','\u672c\u4f1a\u8bdd']]:[])];
+      const saveRates=async text=>{
+        try{
+          const rates=parseRates(text);
+          const accepted=await rateForm.set('rates',JSON.stringify(rates));
+          setRateMessage(accepted?'\u5355\u4ef7\u5df2\u4fdd\u5b58':'\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5');
+          if(accepted)setRateText(null);
+        }catch(error){setRateMessage(error.message);}
+      };
 
-      const balanceNote=balance
-        ? `\u5145\u503c ${balanceMoney(balance.topped,balance.currency)} \u00b7 \u8d60\u9001 ${balanceMoney(balance.granted,balance.currency)}`
-        : balanceState.status==='loading'?'\u6b63\u5728\u67e5\u8be2\u4f59\u989d'
-        : balanceState.body?.reason==='unconfigured'?'未登录 Harness 账户'
-        : '\u4f59\u989d\u67e5\u8be2\u5931\u8d25';
+      const alerts=[];
+      if(state.status==='error')alerts.push(['error',`\u66f4\u65b0\u5931\u8d25\uff1a${state.error??'\u8bf7\u68c0\u67e5\u8fde\u63a5\u540e\u91cd\u8bd5'}`]);
+      if(state.failures.length>0)alerts.push(['warn',`${count(state.failures.length)} \u4e2a\u4f1a\u8bdd\u672a\u80fd\u8bfb\u53d6\uff0c\u7edf\u8ba1\u4ec5\u542b\u5176\u4f59\u4f1a\u8bdd`]);
+      const pendingParts=[];
+      if(summary.unpriced>0)pendingParts.push(`${count(summary.unpriced)} \u6b21\u8c03\u7528\u7f3a\u5c11\u5355\u4ef7`);
+      if(summary.invalid>0)pendingParts.push(`${count(summary.invalid)} \u6b21\u7f3a\u5c11\u5b8c\u6574\u7528\u91cf`);
+      if(pendingParts.length>0)alerts.push(['muted',`${pendingParts.join('\uff0c')}\uff1b\u91d1\u989d\u4ec5\u542b\u53ef\u8ba1\u4ef7\u90e8\u5206`]);
 
-      return h('section',{className:'dsc-dashboard','aria-label':'\u7528\u91cf\u4e0e\u6d88\u8d39','aria-busy':loading},
+      const hasModels=summary.models.length>0||summary.web.requests>0;
+      const hasUsage=summary.calls+summary.web.requests>0;
+      const ratesText=rateText??JSON.stringify(state.rates??{},null,2);
+
+      return h('section',{className:'dsc','aria-label':'\u7528\u91cf\u8ba1\u8d39','aria-busy':loading},
         h('header',{className:'dsc-head'},
           h('div',{className:'dsc-head-main'},
-            h('h1',null,'\u7528\u91cf\u4e0e\u6d88\u8d39'),
-            h('p',null,state.updatedAt
-              ? `\u66f4\u65b0\u4e8e ${clock(state.updatedAt)} \u00b7 \u5df2\u8bfb\u53d6 ${count(state.sessions-state.failures.length)}/${count(state.sessions)} \u4e2a\u4f1a\u8bdd`
-              : '\u4ec5\u8bfb\u53d6\u4f60\u6709\u6743\u8bbf\u95ee\u7684\u4f1a\u8bdd'),
-          ),
-          h('div',{className:'dsc-head-actions'},
-            h('button',{type:'button',className:'dsc-btn',onClick:()=>{void ledger.refresh();refreshBalance(true);},disabled:loading},
-              h(IconRefresh),loading?'\u8bfb\u53d6\u4e2d\u2026':'\u5237\u65b0'),
-            h('button',{type:'button',className:'dsc-btn',onClick:exportData,disabled:unavailable||loading},h(IconDownload),'\u5bfc\u51fa CSV'),
-            onClose?h('button',{type:'button',className:'dsc-btn dsc-btn--icon',onClick:onClose,'aria-label':'\u5173\u95ed'},'\u00d7'):null,
-          ),
-        ),
+            h('h1',null,'\u7528\u91cf\u8ba1\u8d39'),
+            h('p',{className:`dsc-status${state.status==='error'?' is-error':''}`,'aria-live':loading?'polite':undefined},statusText)),
+          h('div',{className:'dsc-actions'},
+            h(IconButton,{label:loading?'\u6b63\u5728\u5237\u65b0':'\u5237\u65b0',disabled:loading,onClick:()=>{void ledger.refresh();void refreshBalance();}},
+              h(IconRefresh,{className:loading?'is-spinning':''})),
+            h(IconButton,{label:'\u5bfc\u51fa CSV',disabled:unavailable||loading,onClick:exportData},h(IconDownload)))),
 
-        h('div',{className:'dsc-hero'},
-          h('div',{className:'dsc-hero-main'},
-            h('div',{className:'dsc-eyebrow'},`\u4eca\u65e5\u6d88\u8d39 \u00b7 ${today}`),
-            h('div',{className:'dsc-hero-value'},unavailable?DASH:money(todaySummary.cost)),
-            h('div',{className:'dsc-hero-meta'},
-              h('span',null,h('b',null,count(todaySummary.calls)),' \u6b21\u8c03\u7528'),
-              h('span',null,h('b',null,compact(todaySummary.totalTokens)),' tokens'),
-              h('span',null,'\u7f13\u5b58\u547d\u4e2d ',h('b',null,pct(todaySummary.cacheRate))),
-              todaySummary.web.requests>0?h('span',null,'\u68c0\u7d22 ',h('b',null,count(todaySummary.web.requests)),' \u6b21'):null,
-              todaySummary.unpriced>0?h('span',null,h('b',null,count(todaySummary.unpriced)),' \u6b21\u672a\u5339\u914d\u5355\u4ef7'):null,
-            ),
-          ),
-          h('div',{className:'dsc-balance'},
-            h('span',null,'登录账户余额'),
-            h('strong',null,balance?balanceMoney(balance.total,balance.currency):DASH),
-            h('small',null,balanceNote),
-          ),
-        ),
+        h('div',{className:'dsc-scope'},
+          h('div',{className:'dsc-tabs',role:'group','aria-label':'\u7edf\u8ba1\u8303\u56f4'},rangeTabs.map(([id,label])=>
+            h('button',{key:id,type:'button',className:'dsc-tab','aria-pressed':period===id,onClick:()=>setPeriod(id)},label))),
+          period==='month'?h('label',{className:'dsc-month'},
+            h('span',null,'\u6708\u4efd'),
+            h('input',{type:'month',value:month,max:currentMonth,'aria-label':'\u9009\u62e9\u7edf\u8ba1\u6708\u4efd',onChange:event=>{if(/^\d{4}-\d{2}$/.test(event.target.value))setMonth(event.target.value);}})):null),
 
-        h('div',{className:'dsc-stats'},
-          h(Stat,{label:'\u672c\u6708\u6d88\u8d39',value:unavailable?DASH:money(monthSummary.cost),note:`${currentMonth} \u00b7 ${count(monthSummary.calls)} \u6b21\u8c03\u7528`}),
-          h(Stat,{label:'\u672c\u6708 tokens',value:unavailable?DASH:compact(monthSummary.totalTokens),note:`\u8f93\u5165 ${compact(monthSummary.input+monthSummary.cacheRead+monthSummary.cacheWrite)} \u00b7 \u8f93\u51fa ${compact(monthSummary.output)}`}),
-          h(Stat,{label:'\u672c\u6708\u7f13\u5b58\u547d\u4e2d',value:unavailable?DASH:pct(monthSummary.cacheRate),note:`\u7f13\u5b58\u8bfb\u53d6 ${compact(monthSummary.cacheRead)} tokens`}),
-        ),
+        h('div',{className:'dsc-panel'},
+          loading&&ratio!==null?h('div',{className:'dsc-progress','aria-hidden':'true'},h('i',{style:{width:`${Math.round(ratio*100)}%`}})):null,
+          h('div',{className:'dsc-hero'},
+            h('div',{className:'dsc-hero-main'},
+              h('div',{className:'dsc-eyebrow'},eyebrow),
+              h('div',{className:'dsc-value'},
+                unavailable?null:h('span',{className:'dsc-cur'},'\u00a5'),
+                h('b',null,unavailable?DASH:amount(summary.cost))),
+              h('div',{className:'dsc-meta'},
+                h('span',null,h('b',null,unavailable?DASH:count(summary.calls)),' \u6b21\u8c03\u7528'),
+                h('span',null,h('b',null,unavailable?DASH:compact(summary.totalTokens)),' tokens'),
+                h('span',null,'\u7f13\u5b58\u547d\u4e2d ',h('b',null,unavailable?DASH:cacheHit(summary))),
+                summary.web.requests>0?h('span',null,h('b',null,count(summary.web.requests)),' \u6b21\u68c0\u7d22'):null,
+                pending>0?h('span',{className:'is-warn'},h('b',null,count(pending)),' \u6b21\u672a\u8ba1\u5165'):null)),
+            h('aside',{className:'dsc-rail'},
+              h('div',{className:'dsc-balance'},
+                h('span',null,'\u8d26\u6237\u4f59\u989d'),
+                h('strong',null,balance?balanceMoney(balance.total,balance.currency):DASH),
+                h('small',null,balanceNote)),
+              h('div',{className:'dsc-rail-fact'},
+                h('span',null,railFact[0]),
+                h('b',null,unavailable?DASH:money(railFact[1]))))),
+          chart.points.length>0&&hasUsage?h(Trend,{kind:chart.kind,points:chart.points,truncated:chart.truncated}):null),
 
-        h('div',{className:'dsc-toolbar'},
-          h('div',{className:'dsc-tabs',role:'group','aria-label':'\u7edf\u8ba1\u8303\u56f4'},tabs.map(([id,label])=>
-            h('button',{type:'button',key:id,'aria-pressed':period===id,onClick:()=>setPeriod(id)},label))),
-          h('div',{className:'dsc-toolbar-right'},
-            period==='month'?h('input',{type:'month',value:month,max:currentMonth,'aria-label':'\u9009\u62e9\u7edf\u8ba1\u6708\u4efd',onChange:event=>{if(/^\d{4}-\d{2}$/.test(event.target.value))setMonth(event.target.value);}}):null,
-          ),
-        ),
+        alerts.length>0?h('div',{className:'dsc-alerts'},alerts.map(([tone,text])=>
+          h('p',{key:text,className:`dsc-alert is-${tone}`},text))):null,
 
-        loading?h('p',{className:'dsc-notice',role:'status'},`\u6b63\u5728\u8bfb\u53d6\u672c\u5730\u4f1a\u8bdd\u8bb0\u5f55 ${state.progress}${state.updatedAt?' \u00b7 \u4e0b\u65b9\u4e3a\u4e0a\u6b21\u7edf\u8ba1':''}`):null,
-        state.status==='error'?h('p',{className:'dsc-notice',role:'alert'},`\u6682\u65f6\u65e0\u6cd5\u66f4\u65b0\uff1a${state.error}\u3002\u8bf7\u68c0\u67e5\u8fde\u63a5\u540e\u91cd\u8bd5\u3002`):null,
-        state.failures.length>0?h('p',{className:'dsc-notice',role:'alert'},`${count(state.failures.length)} \u4e2a\u4f1a\u8bdd\u672a\u8bfb\u53d6\u6210\u529f\uff0c\u4e0b\u65b9\u4e3a\u5df2\u8bfb\u53d6\u90e8\u5206\u7684\u7edf\u8ba1\u3002`):null,
-        unpriced>0?h('p',{className:'dsc-notice'},`${count(summary.unpriced)} \u6b21\u8c03\u7528\u672a\u5339\u914d\u5355\u4ef7\uff0c${count(summary.invalid)} \u6b21\u8c03\u7528\u7f3a\u5c11\u5b8c\u6574\u7528\u91cf\uff1b\u91d1\u989d\u4ec5\u5305\u542b\u53ef\u8ba1\u4ef7\u90e8\u5206\u3002`):null,
-
-        h('div',{className:'dsc-section'},
-          h('div',null,
-            h('h2',null,'\u6a21\u578b\u660e\u7ec6'),
-            h('p',null,`${count(summary.calls)} \u6b21\u8c03\u7528 \u00b7 ${count(summary.totalTokens)} tokens${summary.web.requests>0?` \u00b7 ${count(summary.web.requests)} \u6b21\u68c0\u7d22`:''}`)),
-          h('strong',null,unavailable?DASH:money(summary.cost)),
-        ),
-
-        (summary.models.length>0||summary.web.requests>0)
-          ? h('div',{className:'dsc-models'},
-              summary.models.map(model=>
-                h(ModelCard,{key:`${model.provider}/${model.model}`,model,total:summary.cost,unpriced:model.unpriced===model.calls||model.invalid===model.calls})),
-              summary.web.requests>0?h(WebCard,{key:'web',web:summary.web}):null)
-          : h('div',{className:'dsc-empty'},h(IconEmpty),h('h3',null,unavailable?'\u7b49\u5f85\u7528\u91cf\u8bb0\u5f55':'\u8fd9\u4e2a\u65f6\u6bb5\u8fd8\u6ca1\u6709\u7528\u91cf'),h('p',null,unavailable?'\u8fde\u63a5\u6210\u529f\u540e\u4f1a\u663e\u793a\u7edf\u8ba1\u3002':'\u5b8c\u6210\u4e00\u6b21\u6a21\u578b\u8c03\u7528\u540e\u5237\u65b0\u5373\u53ef\u67e5\u770b\u3002')),
-
-        period==='today'?h('div',{className:'dsc-chart-card'},
-          h('div',{className:'dsc-section'},h('h2',null,'\u4eca\u65e5\u5206\u65f6\u6d88\u8d39'),h('p',null,`${today} \u00b7 CNY`)),
-          h('div',{className:'dsc-chart dsc-chart--hours',role:'img','aria-label':'\u4eca\u65e5\u9010\u5c0f\u65f6\u6d88\u8d39\u56fe'},hourly.map((slot,index)=>
-            h('div',{className:'dsc-day',key:index,title:`${String(index).padStart(2,'0')}:00 \u8d77 \u00b7 ${money(slot.cost)} \u00b7 ${count(slot.calls)} \u6b21`},
-              h('i',{style:{height:`${slot.cost?Math.max(2,slot.cost/hourPeak*100):0}%`}}),
-              h('span',null,index%4===0?String(index):'')))),
-          h('details',{className:'dsc-details'},
-            h('summary',null,'\u67e5\u770b\u5206\u65f6\u660e\u7ec6'),
-            h('div',{className:'dsc-table-wrap'},h('table',{className:'dsc-table'},
-              h('thead',null,h('tr',null,['\u65f6\u6bb5','\u6d88\u8d39','Tokens','\u8c03\u7528'].map(key=>h('th',{key},key)))),
-              h('tbody',null,hourly.map((slot,index)=>h('tr',{key:index},
-                h('td',null,`${String(index).padStart(2,'0')}:00`),
-                h('td',null,money(slot.cost)),
-                h('td',null,count(slot.totalTokens)),
-                h('td',null,count(slot.calls))))))))):null,
-
-        period==='month'?h('div',{className:'dsc-chart-card'},
-          h('div',{className:'dsc-section'},h('h2',null,'\u6bcf\u65e5\u6d88\u8d39'),h('p',null,`${month} \u00b7 CNY`)),
-          h('div',{className:'dsc-chart',role:'img','aria-label':`${month} \u6bcf\u65e5\u6d88\u8d39\u56fe`},daily.map((day,index)=>
-            h('div',{className:'dsc-day',key:index,title:`${month}-${String(index+1).padStart(2,'0')}\uff1a${money(day.cost)} \u00b7 ${count(day.totalTokens)} tokens \u00b7 ${count(day.calls)} \u6b21`},
-              h('i',{style:{height:`${day.cost?Math.max(2,day.cost/peak*100):0}%`}}),
-              h('span',null,index===0||(index+1)%5===0?index+1:'')))),
-          h('details',{className:'dsc-details'},
-            h('summary',null,'\u67e5\u770b\u6bcf\u65e5\u660e\u7ec6'),
-            h('div',{className:'dsc-table-wrap'},h('table',{className:'dsc-table'},
-              h('thead',null,h('tr',null,['\u65e5\u671f','\u6d88\u8d39','Tokens','\u8c03\u7528'].map(key=>h('th',{key},key)))),
-              h('tbody',null,daily.map((day,index)=>h('tr',{key:index},
-                h('td',null,`${month}-${String(index+1).padStart(2,'0')}`),
-                h('td',null,money(day.cost)),
-                h('td',null,count(day.totalTokens)),
-                h('td',null,count(day.calls))))))))):null,
-
-        rateForm?h('details',{className:'dsc-rates'},
-          h('summary',null,'\u81ea\u5b9a\u4e49\u6a21\u578b\u5355\u4ef7'),
-          h('p',null,'\u4e3a\u672a\u8bc6\u522b\u7684\u6a21\u578b\u586b\u5199\u5143 / \u767e\u4e07 tokens \u5355\u4ef7\u3002\u81ea\u5b9a\u4e49\u5355\u4ef7\u4e0d\u4eab\u53d7\u5cf0\u8c37\u6298\u6263\uff0c\u4fdd\u5b58\u540e\u5bf9\u5386\u53f2\u8bb0\u5f55\u91cd\u65b0\u8ba1\u4ef7\u3002\u952e\u540d\u7528\u4e0a\u65b9\u660e\u7ec6\u91cc\u7684 provider/model\u3002'),
-          h('textarea',{'aria-label':'\u6a21\u578b\u4ef7\u683c JSON',spellCheck:false,value:rateText??JSON.stringify(state.rates,null,2),placeholder:'{"provider/model":{"input":1,"cacheRead":0.1,"cacheWrite":1,"output":2}}',onChange:event=>setRateText(event.target.value)}),
-          h('div',{className:'dsc-rates-actions'},
-            h('button',{type:'button',className:'dsc-btn',onClick:async()=>{
-              try{
-                const rates=parseRates(rateText??JSON.stringify(state.rates));
-                const accepted=await rateForm.set('rates',JSON.stringify(rates));
-                setRateMessage(accepted?'\u5355\u4ef7\u5df2\u4fdd\u5b58':'\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5');
-              }catch(error){setRateMessage(error.message);}
-            }},'\u4fdd\u5b58\u5355\u4ef7'),
-            h('span',{role:'status'},rateMessage),
-          )):null,
+        hasModels?h('div',null,
+          h('div',{className:'dsc-section'},
+            h('div',null,
+              h('h2',null,'\u6a21\u578b\u660e\u7ec6'),
+              h('p',null,`${count(summary.calls)} \u6b21\u8c03\u7528 \u00b7 ${compact(summary.totalTokens)} tokens${summary.web.requests>0?` \u00b7 ${count(summary.web.requests)} \u6b21\u68c0\u7d22`:''}`)),
+            h('strong',null,unavailable?DASH:money(summary.cost))),
+          h('div',{className:'dsc-models'},
+            summary.models.map(model=>h(ModelRow,{key:`${model.provider}/${model.model}`,model,total:summary.cost})),
+            summary.web.requests>0?h(WebRow,{key:'web',web:summary.web,total:summary.cost}):null))
+          :h('div',{className:'dsc-empty'},h(IconEmpty),
+            h('p',null,state.status==='error'?'\u6682\u65f6\u65e0\u6cd5\u8bfb\u53d6\u7528\u91cf':unavailable?'\u6b63\u5728\u8bfb\u53d6\u672c\u5730\u4f1a\u8bdd':'\u8fd9\u4e2a\u65f6\u6bb5\u8fd8\u6ca1\u6709\u7528\u91cf'),
+            h('small',null,state.status==='error'?'\u8bf7\u68c0\u67e5\u8fde\u63a5\u540e\u5237\u65b0\u91cd\u8bd5\u3002':unavailable?'\u8bfb\u53d6\u5b8c\u6210\u540e\u4f1a\u81ea\u52a8\u663e\u793a\u7edf\u8ba1\u3002':'\u5b8c\u6210\u4e00\u6b21\u6a21\u578b\u8c03\u7528\u540e\u5237\u65b0\u5373\u53ef\u67e5\u770b\u3002')),
 
         h('footer',{className:'dsc-foot'},
-          h('p',null,state.updatedAt
-            ? `\u5df2\u8bfb\u53d6 ${count(state.sessions-state.failures.length)} / ${count(state.sessions)} \u4e2a\u4f1a\u8bdd \u00b7 \u66f4\u65b0\u4e8e ${clock(state.updatedAt)}`
-            : '\u4ec5\u5728\u5f53\u524d Harness \u4e2d\u8bfb\u53d6\u4f60\u6709\u6743\u8bbf\u95ee\u7684\u4f1a\u8bdd'),
-          h('details',null,
-            h('summary',null,'\u8ba1\u4ef7\u89c4\u5219'),
-            h('p',null,`\u6bcf\u6b21\u8c03\u7528\u6309\u5b9e\u9645 token \u7528\u91cf \u00d7 \u5b98\u65b9\u5355\u4ef7\u8ba1\u4ef7\uff08${PRICE_VERSION} \u4ef7\u683c\u5feb\u7167\uff09\u3002\u5cf0\u8c37\u4ef7\u6309\u8c03\u7528\u5f00\u59cb\u65f6\u95f4\u5224\u5b9a\uff1a\u5317\u4eac\u65f6\u95f4\u5468\u4e00\u81f3\u5468\u4e94 09:00-12:00\u300114:00-18:00 \u4e3a\u9ad8\u5cf0\uff0c\u5176\u4f59\u65f6\u6bb5\u3001\u5468\u672b\u4e0e\u6cd5\u5b9a\u8282\u5047\u65e5\u4e3a\u7a7a\u95f2\u4ef7\uff08\u9ad8\u5cf0\u7684\u4e00\u534a\uff09\u3002\u81ea\u52a8\u6392\u9664\u5206\u53c9\u7ee7\u627f\u7684\u5386\u53f2\u8bb0\u5f55\uff0c\u91cd\u8bd5\u72ec\u7acb\u8ba1\u4f5c\u4e00\u6b21\u8c03\u7528\u3002`),
-            h('p',null,'\u4ec5\u7edf\u8ba1\u4f1a\u8bdd\u65e5\u5fd7\u4e2d\u7684\u6a21\u578b token \u7528\u91cf\uff0c\u52a0\u4e0a\u7f51\u9875\u641c\u7d22\u4e0e\u6293\u53d6\uff085 \u5143 / 1000 \u6b21\u6210\u529f\u8bf7\u6c42\uff0c\u6bcf\u6b21 \u00a50.005\uff09\uff1b\u6807\u9898\u751f\u6210\u7b49\u8c03\u7528\u82e5\u672a\u8bb0\u5165\u5219\u4e0d\u542b\u3002\u5df2\u5220\u9664\u3001\u4e0d\u53ef\u8bbf\u95ee\u6216\u672a\u8fc1\u79fb\u4f1a\u8bdd\u4e0d\u8ba1\u5165\u3002'),
-            h('a',{href:PRICE_SOURCE,target:'_blank',rel:'noreferrer'},'\u5b98\u65b9\u4ef7\u683c\u8868 \u2197'),
-          ),
-        ),
-      );
+          h('div',{className:'dsc-foot-line'},
+            h('span',null,`\u91d1\u989d\u4e3a\u4f30\u7b97 \u00b7 \u4ef7\u683c\u5feb\u7167 ${PRICE_VERSION}`),
+            h('a',{href:PRICE_SOURCE,target:'_blank',rel:'noreferrer'},'\u5b98\u65b9\u4ef7\u683c\u8868 \u2197')),
+          h('details',{className:'dsc-more'},
+            h('summary',null,'\u8ba1\u4ef7\u89c4\u5219\u4e0e\u81ea\u5b9a\u4e49\u5355\u4ef7'),
+            h('div',{className:'dsc-prose'},
+              h('p',null,'\u6bcf\u6b21\u8c03\u7528\u6309\u5b9e\u9645 token \u7528\u91cf \u00d7 \u5b98\u65b9\u5355\u4ef7\u8ba1\u4ef7\u3002\u5317\u4eac\u65f6\u95f4\u5468\u4e00\u81f3\u5468\u4e94 09:00\u201312:00\u300114:00\u201318:00 \u4e3a\u9ad8\u5cf0\uff0c\u5176\u4f59\u65f6\u6bb5\u3001\u5468\u672b\u4e0e\u6cd5\u5b9a\u8282\u5047\u65e5\u6309\u9ad8\u5cf0\u4ef7\u7684\u4e00\u534a\u8ba1\u4ef7\u3002\u5206\u53c9\u7ee7\u627f\u7684\u5386\u53f2\u4e0d\u91cd\u590d\u8ba1\u8d39\uff0c\u91cd\u8bd5\u5355\u72ec\u8ba1\u6b21\u3002'),
+              h('p',null,'\u4ec5\u7edf\u8ba1\u4f1a\u8bdd\u65e5\u5fd7\u4e2d\u7684\u6a21\u578b token \u7528\u91cf\uff0c\u4ee5\u53ca\u6210\u529f\u7ed3\u7b97\u7684\u7f51\u9875\u641c\u7d22\u4e0e\u6293\u53d6\uff085 \u5143 / 1000 \u6b21\uff0c\u6bcf\u6b21 \u00a50.005\uff09\u3002\u91d1\u989d\u4e3a\u4f30\u7b97\uff0c\u4ee5\u5b98\u65b9\u8d26\u5355\u4e3a\u51c6\u3002')),
+            rateForm?h('div',{className:'dsc-rates'},
+              h('div',{className:'dsc-rates-head'},h('h3',null,'\u81ea\u5b9a\u4e49\u6a21\u578b\u5355\u4ef7'),h('span',null,'\u5143 / \u767e\u4e07 tokens')),
+              h('p',null,'\u4e3a\u672a\u8bc6\u522b\u7684\u6a21\u578b\u586b\u5199 provider/model \u56db\u9879\u5355\u4ef7\u3002\u81ea\u5b9a\u4e49\u5355\u4ef7\u4e0d\u4eab\u53d7\u5cf0\u8c37\u6298\u6263\uff0c\u4fdd\u5b58\u540e\u5bf9\u5168\u90e8\u5386\u53f2\u91cd\u65b0\u8ba1\u4ef7\u3002'),
+              h('textarea',{'aria-label':'\u6a21\u578b\u4ef7\u683c JSON',spellCheck:false,value:ratesText,placeholder:'{"provider/model":{"input":1,"cacheRead":0.1,"cacheWrite":1,"output":2}}',onChange:event=>setRateText(event.target.value)}),
+              h('div',{className:'dsc-rate-actions'},
+                h('button',{type:'button',className:'dsc-btn dsc-btn--primary',onClick:()=>void saveRates(ratesText)},'\u4fdd\u5b58\u5355\u4ef7'),
+                h('button',{type:'button',className:'dsc-btn',onClick:()=>void saveRates('{}')},'\u6062\u590d\u5185\u7f6e\u4ef7\u683c'),
+                h('span',{className:'dsc-rate-msg',role:'status'},rateMessage))):null)));
     }
     //#endregion
 
-    //#region dock pill
-    function CostDock({ledger,sessionId,useProjection,rateForm,readAccountBalance}) {
+    //#region composer popover
+    function CostBubble({ledger,sessionId,readAccountBalance}) {
+      const state=useLedger(ledger,15000);
+      const [balanceState,refreshBalance]=useBalance(readAccountBalance);
+      const summary=ledger.summary({sessionId});
+      const today=ledger.summary({day:dateKey(Date.now())});
+      const balance=readBalance(balanceState);
+      const balanceText=balance?balanceMoney(balance.total,balance.currency)
+        :balanceState.status==='loading'?'\u2026'
+        :balanceState.body?.reason==='unconfigured'?'\u672a\u767b\u5f55'
+        :balanceState.status==='error'?'\u67e5\u8be2\u5931\u8d25'
+        :DASH;
+      const ready=state.updatedAt;
+      const loading=state.status==='loading';
+      const pending=summary.unpriced+summary.invalid;
+      const notes=[];
+      if(state.status==='error')notes.push(ready?'\u66f4\u65b0\u5931\u8d25\uff0c\u663e\u793a\u4e0a\u6b21\u7ed3\u679c':'\u66f4\u65b0\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u8fde\u63a5');
+      if(pending>0)notes.push(`${count(pending)} \u6b21\u8c03\u7528\u672a\u8ba1\u5165`);
+      const buckets=[
+        ['input','\u672a\u7f13\u5b58\u8f93\u5165'],
+        ['cacheRead','\u7f13\u5b58\u8bfb\u53d6'],
+        ['cacheWrite','\u7f13\u5b58\u5199\u5165'],
+        ['output','\u8f93\u51fa'],
+      ];
+      return h('div',{className:'dsc-pop-body'},
+        h('div',{className:'dsc-pop-head'},
+          h('span',{className:'dsc-pop-title'},h(IconCost,{size:14}),'\u672c\u4f1a\u8bdd\u6d88\u8d39'),
+          h('b',{className:'dsc-pop-cost'},ready?money(summary.cost):DASH)),
+        h('div',{className:'dsc-pop-sub'},
+          h('span',null,`\u4eca\u65e5 ${ready?money(today.cost):DASH}`),
+          h('i',null,'\u00b7'),
+          h('span',{title:balanceState.stale?'\u4f59\u989d\u5237\u65b0\u5931\u8d25\uff0c\u663e\u793a\u4e0a\u6b21\u7ed3\u679c':undefined},`\u4f59\u989d ${balanceText}`)),
+        h('div',{className:'dsc-pop-rule','aria-hidden':'true'}),
+        h('div',{className:'dsc-pop-rows'},buckets.map(([key,label])=>
+          h('div',{className:'dsc-pop-row',key},
+            h('span',null,label),
+            h('b',null,ready?`${count(summary[key])} tok`:DASH),
+            h('small',null,ready?money(summary.costs[key]):DASH)))),
+        summary.web.requests>0?h('div',{className:'dsc-pop-row'},
+          h('span',null,'\u7f51\u9875\u68c0\u7d22'),
+          h('b',null,`${count(summary.web.requests)} \u6b21`),
+          h('small',null,money(summary.web.cost))):null,
+        notes.length>0?h('p',{className:'dsc-pop-note'},notes.join('\uff1b')):null,
+        h('div',{className:'dsc-pop-rule','aria-hidden':'true'}),
+        h('div',{className:'dsc-pop-foot'},
+          h('span',null,ready?h(React.Fragment,null,
+            h('b',null,count(summary.calls)),' \u6b21\u8c03\u7528',
+            h('i',null,'\u00b7'),
+            `\u7f13\u5b58\u547d\u4e2d ${cacheHit(summary)}`,
+            h('i',null,'\u00b7'),
+            clock(state.updatedAt)):(loading?'\u6b63\u5728\u8bfb\u53d6\u7528\u91cf\u2026':'\u5c1a\u672a\u8bfb\u53d6\u7528\u91cf')),
+          h('button',{type:'button',className:'dsc-pop-refresh',title:'\u5237\u65b0','aria-label':'\u5237\u65b0\u7528\u91cf',disabled:loading,onClick:()=>{void ledger.refresh();void refreshBalance();}},
+            h(IconRefresh,{className:loading?'is-spinning':''}))));
+    }
+
+    function CostDock({ledger,sessionId,useProjection,readAccountBalance}) {
       const state=React.useSyncExternalStore(ledger.subscribe,ledger.getSnapshot,ledger.getSnapshot);
       const [open,setOpen]=React.useState(false);
-      const panel=React.useRef(null);
+      const [popId]=React.useState(()=>`session-cost-popover-${++popoverSeq}`);
+      const trigger=React.useRef(null);
       const usage=useProjection('tokenUsage');
-      const hasUsage=usage&&Object.values(usage).some(value=>typeof value==='number'&&value>0);
-
-      React.useEffect(()=>{if(hasUsage)void ledger.refresh();},[ledger,usage]);
-
-      React.useEffect(()=>{
-        if(!open)return;
-        const previous=document.activeElement;
-        panel.current?.querySelector('button')?.focus();
-        const onKey=event=>{
-          if(event.key==='Escape'){setOpen(false);return;}
-          if(event.key!=='Tab')return;
-          const nodes=[...panel.current.querySelectorAll('button:not(:disabled),input,a,summary')];
-          const first=nodes[0],last=nodes.at(-1);
-          if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
-          else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
-        };
-        document.addEventListener('keydown',onKey);
-        return()=>{document.removeEventListener('keydown',onKey);previous?.focus();};
-      },[open]);
+      const active=usage&&Object.values(usage).some(value=>typeof value==='number'&&value>0);
+      const signature=JSON.stringify(usage??null);
+      React.useEffect(()=>{if(active)ledger.refreshSoon();},[ledger,signature,active]);
+      const close=React.useCallback(()=>setOpen(false),[]);
 
       const today=ledger.summary({day:dateKey(Date.now())});
       const session=ledger.summary({sessionId});
-      const label=state.updatedAt?`${money(session.cost)}`:'\u6d88\u8d39';
-      const title=state.updatedAt?`\u672c\u4f1a\u8bdd ${money(session.cost)}\uff1b\u4eca\u65e5 ${money(today.cost)}`:'\u7528\u91cf\u4e0e\u6d88\u8d39';
-
-      const modal=open&&h('div',{className:'dsc-backdrop',onPointerDown:event=>{if(event.target===event.currentTarget)setOpen(false);}},
-        h('div',{className:'dsc-modal',role:'dialog','aria-modal':true,'aria-label':'\u7528\u91cf\u4e0e\u6d88\u8d39',ref:panel},
-          h(Dashboard,{ledger,sessionId,rateForm,readAccountBalance,onClose:()=>setOpen(false)})));
+      const ready=state.updatedAt;
+      const title=ready?`\u672c\u4f1a\u8bdd ${money(session.cost)}\uff1b\u4eca\u65e5 ${money(today.cost)}`:'\u7528\u91cf\u8ba1\u8d39';
 
       return h(React.Fragment,null,
         h('span',{className:'dsc-anchor'},
-          h('button',{type:'button',className:'dsc-pill','aria-haspopup':'dialog','aria-expanded':open,title,onClick:()=>setOpen(true)},
-            h(IconCost),
-            h('span',null,label),
-            state.updatedAt?h('i',null,'\u00b7'):null,
-            state.updatedAt?h('span',null,`\u4eca\u65e5 ${money(today.cost)}`):null,
-          )),
-        modal&&(portal?portal(modal,document.body):modal));
+          h('button',{ref:trigger,type:'button',className:'dsc-pill','aria-haspopup':'dialog','aria-expanded':open,'aria-controls':popId,title,onClick:()=>setOpen(value=>!value)},
+            h(IconCost,{size:13}),
+            h('b',null,ready?money(session.cost):'\u7528\u91cf'),
+            ready?h('i',null,'\u00b7'):null,
+            ready?h('span',{className:'dsc-pill-sub'},`\u4eca\u65e5 ${money(today.cost)}`):null)),
+        open?h(Popover,{id:popId,anchorRef:trigger,label:'\u672c\u4f1a\u8bdd\u6d88\u8d39',onClose:close},
+          h(CostBubble,{ledger,sessionId,readAccountBalance})):null);
     }
     //#endregion
 
@@ -566,11 +801,11 @@ function normalizeBalance(result) {
       const updateRates=()=>{try{ledger.setRates(parseRates(rateForm.getSnapshot().value?.rates??'{}'));}catch{ledger.setRates({});}};
       ctx.effect(()=>rateForm.subscribe(updateRates));updateRates();
       ctx.effect(()=>()=>ledger.dispose());
-      ctx.effect(()=>ctx.locale.register(NS,{zh:{title:'\u7528\u91cf\u4e0e\u6d88\u8d39'},en:{title:'Usage & spending'}}));
+      ctx.effect(()=>ctx.locale.register(NS,{zh:{title:'\u7528\u91cf\u8ba1\u8d39'},en:{title:'Usage & billing'}}));
       ctx.effect(()=>{const style=document.createElement('style');style.dataset.plugin='@local/session-cost';style.textContent=CSS;document.head.appendChild(style);return()=>style.remove();});
       ctx.slots.inject('settings.section',()=>ctx.slots.register({name:'settings.section',id:'session-cost',order:6,locale:NS,label:()=>ctx.locale.bind(NS)('title'),inject:()=>({ledger,rateForm,readAccountBalance})},Dashboard));
       ctx.slots.inject('settings.section.icon',()=>ctx.slots.register({name:'settings.section.icon',id:'session-cost'},IconCost));
-      ctx.slots.inject('conversation.composer.dock',()=>ctx.slots.register({name:'conversation.composer.dock',id:'cost',order:2,locale:NS,inject:sessionId=>({ledger,sessionId,rateForm,readAccountBalance})},CostDock));
+      ctx.slots.inject('conversation.composer.dock',()=>ctx.slots.register({name:'conversation.composer.dock',id:'cost',order:2,locale:NS,inject:sessionId=>({ledger,sessionId,readAccountBalance})},CostDock));
     }};
   },
 });

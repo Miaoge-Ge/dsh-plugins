@@ -4,47 +4,39 @@
     "zh": "青瓷",
     "en": "Celadon"
   },
-  "style": {
-    "zh": "东方 · 自然",
-    "en": "Organic"
-  },
-  "description": {
-    "zh": "青瓷绿与温润石色，收敛的线条，安静的呼吸感。",
-    "en": "Celadon and warm stone. Gentle contours, naturally composed."
-  },
   "design": "organic",
   "radii": [
+    2,
     4,
+    6,
     8,
-    14,
-    20,
-    26,
-    34
+    10,
+    14
   ],
   "light": {
-    "bg": "#f5f6ef",
-    "sidebar": "#e9eee3",
-    "surface": "#fcfcf7",
-    "raised": "#fffffb",
-    "text": "#253a31",
-    "muted": "#526658",
-    "accent": "#28664e",
-    "onAccent": "#ffffff",
-    "line": "#cbd6c6",
-    "soft": "#e1ebde",
-    "code": "#edf1e7"
+    "bg": "#fdf6e3",
+    "sidebar": "#f5efdc",
+    "surface": "#fffcf2",
+    "raised": "#fffffa",
+    "text": "#3f5154",
+    "muted": "#55696d",
+    "accent": "#1c6e8c",
+    "onAccent": "#f7fcfd",
+    "line": "#ddd4ba",
+    "soft": "#eee8d5",
+    "code": "#f7f1df"
   },
   "dark": {
-    "bg": "#15221e",
-    "sidebar": "#111b18",
-    "surface": "#1c2d26",
-    "raised": "#26392f",
-    "text": "#e3eee3",
-    "muted": "#b0c8b5",
-    "accent": "#a0d6b2",
-    "onAccent": "#173021",
-    "line": "#3c5143",
-    "soft": "#2e4437",
-    "code": "#18271f"
+    "bg": "#002b36",
+    "sidebar": "#00212b",
+    "surface": "#073642",
+    "raised": "#0a3a46",
+    "text": "#d9e3e3",
+    "muted": "#9fb0b0",
+    "accent": "#5fc2ba",
+    "onAccent": "#04242a",
+    "line": "#1a5665",
+    "soft": "#0f4653",
+    "code": "#032b35"
   }
 }

@@ -4,47 +4,39 @@
     "zh": "曜石",
     "en": "Obsidian"
   },
-  "style": {
-    "zh": "静奢 · 精密",
-    "en": "Quiet luxury"
-  },
-  "description": {
-    "zh": "冷灰与香槟金，留白有序，让注意力回到内容。",
-    "en": "Graphite, champagne and measured space. A quieter place to think."
-  },
   "design": "minimal",
   "radii": [
-    3,
+    2,
+    4,
     6,
+    8,
     10,
-    14,
-    18,
-    24
+    14
   ],
   "light": {
-    "bg": "#faf9f6",
-    "sidebar": "#f0efeb",
+    "bg": "#f6f8fa",
+    "sidebar": "#eef1f4",
     "surface": "#ffffff",
     "raised": "#ffffff",
-    "text": "#20242b",
-    "muted": "#575c65",
-    "accent": "#75572d",
+    "text": "#1f2328",
+    "muted": "#59636e",
+    "accent": "#0860c4",
     "onAccent": "#ffffff",
-    "line": "#d9d8d2",
-    "soft": "#eeebe4",
-    "code": "#f1f0ec"
+    "line": "#d0d7de",
+    "soft": "#eaeef2",
+    "code": "#f6f8fa"
   },
   "dark": {
-    "bg": "#13161c",
-    "sidebar": "#101319",
-    "surface": "#1b2028",
-    "raised": "#242a34",
-    "text": "#eae8e2",
-    "muted": "#b1b7c2",
-    "accent": "#dec79b",
-    "onAccent": "#24201a",
-    "line": "#363e4a",
-    "soft": "#2b3039",
-    "code": "#171b22"
+    "bg": "#0d1117",
+    "sidebar": "#010409",
+    "surface": "#161b22",
+    "raised": "#1c2129",
+    "text": "#e6edf3",
+    "muted": "#a5adb7",
+    "accent": "#58a6ff",
+    "onAccent": "#0d1117",
+    "line": "#30363d",
+    "soft": "#262c36",
+    "code": "#161b22"
   }
 }

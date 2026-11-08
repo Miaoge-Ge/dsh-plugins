@@ -9,32 +9,85 @@ window.__ModuleLoader__.load({
     /*__LOCALES__*/
     /*__STYLES__*/
 
+    const SERIF = '"Sitka Display", "Palatino Linotype", "Book Antiqua", Charter, Georgia, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", SimSun, serif';
+
+    // Native is a selectable choice like every theme, so the panel needs a
+    // representative palette for its preview. It follows the host's default
+    // light/dark surfaces and blue accent, but is never installed as a theme
+    // layer: choosing it simply releases this plugin's overrides.
+    const NATIVE = {
+      id: 'native',
+      design: 'minimal',
+      radii: [4, 6, 8, 10, 12, 14],
+      light: {
+        bg: '#ffffff', sidebar: '#f5f6f8', surface: '#ffffff', raised: '#ffffff',
+        text: '#1f2329', muted: '#5c6370', accent: '#4176e6', line: '#e4e7ec',
+        soft: '#f0f2f5', code: '#f7f8fa',
+      },
+      dark: {
+        bg: '#151517', sidebar: '#101012', surface: '#1c1d20', raised: '#232428',
+        text: '#e8eaed', muted: '#a0a4ab', accent: '#7aaaff', line: '#33353a',
+        soft: '#292a2e', code: '#191a1d',
+      },
+    };
+
     function PaletteMark({ size = 18 }) {
       return h('svg', { viewBox: '0 0 24 24', width: size, height: size, fill: 'none', 'aria-hidden': true },
         h('path', { d: 'M4 19 10 5h4l6 14h-5l-1.4-4H9.4L8 19z', fill: 'currentColor' }));
     }
 
-    // One card per design family. The swatch band is painted from the theme's own
-    // palette in the active scheme, so the choice reads as colour rather than as
-    // a screenshot of a fake workspace.
-    function ThemeCard({ theme, scheme, applied, disabled, onPick, t }) {
-      const p = theme[scheme];
+    function CheckMark() {
+      return h('svg', { viewBox: '0 0 12 12', width: 10, height: 10, fill: 'none', 'aria-hidden': true },
+        h('path', { d: 'M2.2 6.2 4.8 8.8 9.8 3.4', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    }
+
+    function previewStyle(palette, theme) {
+      return {
+        '--pv-bg': palette.bg,
+        '--pv-sidebar': palette.sidebar,
+        '--pv-surface': palette.surface,
+        '--pv-raised': palette.raised,
+        '--pv-text': palette.text,
+        '--pv-muted': palette.muted,
+        '--pv-accent': palette.accent,
+        '--pv-line': palette.line,
+        '--pv-soft': palette.soft,
+        '--pv-rad': `${Math.min(theme.radii[2], 10)}px`,
+        '--pv-font': theme.design === 'editorial' || theme.design === 'organic' ? SERIF : 'inherit',
+      };
+    }
+
+    // A miniature work surface painted from one palette. The theme name sits
+    // in the window's title bar, so the label cannot be mistaken for a caption
+    // that belongs to some other card.
+    function ThemePreview({ theme, scheme, label, applied }) {
+      return h('span', { className: 'at-stage', style: previewStyle(theme[scheme], theme), 'aria-hidden': true },
+        h('span', { className: 'at-topbar' },
+          h('span', { className: 'at-topbar-dot' }),
+          h('span', { className: 'at-topbar-name' }, label),
+          applied ? h('span', { className: 'at-topbar-check' }, h(CheckMark)) : null),
+        h('span', { className: 'at-workspace' },
+          h('span', { className: 'at-rail' },
+            h('span', { className: 'at-rail-mark' }),
+            h('span', { className: 'at-rail-line at-w70' }),
+            h('span', { className: 'at-rail-line at-w50' }),
+            h('span', { className: 'at-rail-line at-w60' })),
+          h('span', { className: 'at-main' },
+            h('span', { className: 'at-type' }, 'Aa'),
+            h('span', { className: 'at-text-line at-w90' }),
+            h('span', { className: 'at-mini-card' },
+              h('span', { className: 'at-mini-line at-w60' }),
+              h('span', { className: 'at-mini-line at-w90' })),
+            h('span', { className: 'at-cta' }))));
+    }
+
+    function ThemeCard({ theme, scheme, label, applied, disabled, onPick, t }) {
       return h('button', {
         type: 'button', className: 'at-card', 'aria-pressed': applied, disabled,
-        'aria-label': `${t(`${theme.id}.name`)} · ${t(`${theme.id}.style`)}`,
-        title: t(`${theme.id}.description`), onClick: () => onPick(theme.id),
+        'aria-label': `${label}${applied ? ` · ${t('applied')}` : ''}`,
+        onClick: () => onPick(theme.id),
       },
-        h('span', { className: 'at-swatch', 'aria-hidden': true },
-          h('i', { style: { background: p.bg } }),
-          h('i', { style: { background: p.sidebar } }),
-          h('i', { style: { background: p.surface } }),
-          h('i', { style: { background: p.accent } })),
-        h('span', { className: 'at-card-body' },
-          h('strong', null, t(`${theme.id}.name`)),
-          h('small', null, t(`${theme.id}.style`))),
-        h('span', {className:'at-card-description'}, t(`${theme.id}.description`)),
-        h('span', { className: 'at-card-state' }, applied ? t('applied') : '\u2192'),
-      );
+        h(ThemePreview, { theme, scheme, label, applied }));
     }
 
     function Atelier({ t, useSettings, useTheme, save, setMode, compatible }) {
@@ -50,49 +103,58 @@ window.__ModuleLoader__.load({
         catch { setMessage(t('saveError')); }
         finally { setPending(false); }
       };
+      const currentPalette = selected ? selected[scheme] : NATIVE[scheme];
       const currentLabel = selected ? t(`${selected.id}.name`) : t('native');
+      const choices = [...themes, NATIVE];
 
       return h('section', { className: 'at-page', 'aria-label': t('title'), 'aria-busy': pending },
         h('header', { className: 'at-head' },
-          h('div', { className: 'at-head-main' },
+          h('div', { className: 'at-head-copy' },
             h('h1', null, t('title')),
-            h('p', null, `${t('current')} \u00b7 ${currentLabel}`)),
-          h('button', {
-            type: 'button', className: 'at-btn', disabled: locked || value.theme === 'native',
-            onClick: () => run(() => save('theme', 'native')),
-          }, t('restore'))),
+            h('p', { className: 'at-subtitle' }, t('subtitle')),
+            h('p', { className: 'at-current' },
+              h('i', { style: { background: currentPalette.accent }, 'aria-hidden': true }),
+              `${t('current')} · ${currentLabel} · ${t(scheme)}`))),
 
         !compatible ? h('p', { className: 'at-note', role: 'alert' }, t('unsupported')) : null,
         settings.status !== 'ready' ? h('p', { className: 'at-note', role: 'status' }, t(settings.status === 'unavailable' ? 'unavailable' : 'loading')) : null,
         settings.status === 'ready' && !settings.writable ? h('p', { className: 'at-note' }, t('readOnly')) : null,
 
-        h('div', { className: 'at-grid' }, themes.map(theme => h(ThemeCard, {
-          key: theme.id, theme, scheme, t,
-          applied: value.theme === theme.id,
-          disabled: locked,
-          onPick: id => run(() => save('theme', id)),
-        }))),
+        h('section', { className: 'at-gallery', 'aria-label': t('collection') },
+          h('div', { className: 'at-grid' }, choices.map(theme => {
+            const label = theme.id === 'native' ? t('native') : t(`${theme.id}.name`);
+            return h(ThemeCard, {
+              key: theme.id, theme, scheme, label, t,
+              applied: value.theme === theme.id,
+              disabled: locked,
+              onPick: id => run(() => save('theme', id)),
+            });
+          }))),
 
-        h('div', { className: 'at-settings' },
-          h('div', { className: 'at-row' },
-            h('div', { className: 'at-row-copy' },
-              h('h3', null, t('appearance')),
-              h('p', null, t('appearanceDescription'))),
-            h('div', { className: 'at-segment', role: 'group', 'aria-label': t('appearance') },
-              ['light', 'dark', 'system'].map(mode => h('button', {
-                key: mode, type: 'button', 'aria-pressed': current?.preference === mode, disabled: locked,
-                onClick: () => run(() => setMode(mode)),
-              }, t(mode))))),
-          h('div', { className: 'at-row' },
-            h('div', { className: 'at-row-copy' },
-              h('h3', null, t('signature')),
-              h('p', null, t('signatureDescription'))),
-            h('button', {
-              type: 'button', className: 'at-switch', role: 'switch', 'aria-label': t('signature'),
-              'aria-checked': value.signature !== false, disabled: locked,
-              onClick: () => run(() => save('signature', value.signature === false)),
-            }, h('span')))),
+        h('section', { className: 'at-settings', 'aria-labelledby': 'at-settings-title' },
+          h('div', { className: 'at-section-head' },
+            h('h2', { id: 'at-settings-title' }, t('makeItYours'))),
+          h('div', { className: 'at-panel' },
+            h('div', { className: 'at-row' },
+              h('div', { className: 'at-row-copy' },
+                h('h3', null, t('appearance')),
+                h('p', null, t('appearanceDescription'))),
+              h('div', { className: 'at-segment', role: 'group', 'aria-label': t('appearance') },
+                ['light', 'dark', 'system'].map(mode => h('button', {
+                  key: mode, type: 'button', 'aria-pressed': current?.preference === mode, disabled: locked,
+                  onClick: () => run(() => setMode(mode)),
+                }, t(mode))))),
+            h('div', { className: 'at-row' },
+              h('div', { className: 'at-row-copy' },
+                h('h3', null, t('signature')),
+                h('p', null, t('signatureDescription'))),
+              h('button', {
+                type: 'button', className: 'at-switch', role: 'switch', 'aria-label': t('signature'),
+                'aria-checked': value.signature !== false, disabled: locked,
+                onClick: () => run(() => save('signature', value.signature === false)),
+              }, h('span'))))),
 
+        h('p', { className: 'at-foot' }, t('footer')),
         h('p', { className: 'at-status', role: 'status', 'aria-live': 'polite' }, pending ? t('saving') : message));
     }
 
@@ -105,7 +167,7 @@ window.__ModuleLoader__.load({
         const locale = {};
         for (const lang of ['zh', 'en']) {
           locale[lang] = { ...dictionaries[lang].ui };
-          for (const theme of themes) for (const key of ['name', 'description', 'style']) locale[lang][`${theme.id}.${key}`] = theme[key][lang];
+          for (const theme of themes) locale[lang][`${theme.id}.name`] = theme.name[lang];
         }
         ctx.effect(() => ctx.locale.register(NS, locale));
         if (compatible) ctx.effect(() => mountLayer(ctx.theme, form, themes));
