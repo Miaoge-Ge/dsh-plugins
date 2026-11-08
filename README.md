@@ -1,6 +1,6 @@
 # DSH 插件 · DeepSeek Harness Plugins
 
-DeepSeek Harness 的三个插件，一个仓库统一维护。三个插件独立升版：用量计费为 **0.0.5**，主题工坊为 **0.0.6**，Code 模式为 **0.0.4**。
+DeepSeek Harness 的三个插件，一个仓库统一维护。三个插件独立升版：用量计费为 **0.0.6**，主题工坊为 **0.0.6**，Code 模式为 **0.0.4**。
 
 | 插件 | 目录 | 功能 |
 | --- | --- | --- |
@@ -53,7 +53,7 @@ npm.cmd run pack:plugins  # 在 dist/ 生成三个安装包
 
 ```text
 dsh-plugins/
-├── dsh-session-cost/       # 用量计费 0.0.5
+├── dsh-session-cost/       # 用量计费 0.0.6
 ├── dsh-theme-atelier/      # 主题工坊 0.0.6
 ├── dsh-code-mode-preset/   # Code 模式 0.0.4
 ├── scripts/               # 统一安装、校验与打包

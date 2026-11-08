@@ -201,7 +201,7 @@ window.__ModuleLoader__.load({
         const place=()=>{
           const rect=anchorRef.current?.getBoundingClientRect();
           if(!rect)return;
-          const width=Math.min(320,window.innerWidth-24);
+          const width=Math.min(340,window.innerWidth-24);
           const left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12));
           const above=rect.top-12;
           const next=above>=220
@@ -498,12 +498,14 @@ window.__ModuleLoader__.load({
       const notes=[];
       if(state.status==='error')notes.push(ready?'\u66f4\u65b0\u5931\u8d25\uff0c\u663e\u793a\u4e0a\u6b21\u7ed3\u679c':'\u66f4\u65b0\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u8fde\u63a5');
       if(pending>0)notes.push(`${count(pending)} \u6b21\u8c03\u7528\u672a\u8ba1\u5165`);
+      // Cache writes only exist for providers/models that report them; a zero
+      // row for everyone else is noise. Show it when this session produced some.
       const buckets=[
         ['input','\u672a\u7f13\u5b58\u8f93\u5165'],
         ['cacheRead','\u7f13\u5b58\u8bfb\u53d6'],
         ['cacheWrite','\u7f13\u5b58\u5199\u5165'],
         ['output','\u8f93\u51fa'],
-      ];
+      ].filter(([key])=>key!=='cacheWrite'||summary.cacheWrite>0);
       return h('div',{className:'dsc-pop-body'},
         h('div',{className:'dsc-pop-head'},
           h('span',{className:'dsc-pop-title'},h(IconCost,{size:14}),'\u672c\u4f1a\u8bdd\u6d88\u8d39'),

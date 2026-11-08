@@ -198,7 +198,7 @@
   position:fixed;
   z-index:1200;
   box-sizing:border-box;
-  padding:12px 13px 10px;
+  padding:13px 14px 11px;
   overflow:auto;
   overscroll-behavior:contain;
   border:1px solid var(--dsc-line-2);
@@ -206,7 +206,7 @@
   background:var(--dsw-alias-bg-overlay,var(--dsw-alias-bg-layer-1));
   box-shadow:0 16px 40px rgb(0 0 0/.18),0 2px 8px rgb(0 0 0/.06);
   color:var(--dsc-ink);
-  font:12px/1.5 var(--dsh-font-family,"Segoe UI","Microsoft YaHei",system-ui,sans-serif);
+  font:13px/1.55 var(--dsh-font-family,"Segoe UI","Microsoft YaHei",system-ui,sans-serif);
   animation:dsc-pop-in .14s ease-out;
   cursor:default;
 }
@@ -215,27 +215,27 @@
 .dsc-pop :focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsc-accent));outline-offset:2px}
 .dsc-pop-body{min-width:0}
 .dsc-pop-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.dsc-pop-title{display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:12px;font-weight:600;line-height:1.5;white-space:nowrap}
+.dsc-pop-title{display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:13px;font-weight:600;line-height:1.5;white-space:nowrap}
 .dsc-pop-title svg{color:var(--dsc-mute)}
-.dsc-pop-cost{flex:none;font-size:17px;font-weight:600;letter-spacing:-.4px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.dsc-pop-sub{display:flex;align-items:center;gap:5px;margin-top:1px;font-size:10.5px;color:var(--dsc-mute);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden}
+.dsc-pop-cost{flex:none;font-size:18px;font-weight:600;letter-spacing:-.4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dsc-pop-sub{display:flex;align-items:center;gap:5px;margin-top:1px;font-size:12px;color:var(--dsc-mute);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden}
 .dsc-pop-sub span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .dsc-pop-sub i{font-style:normal;opacity:.45}
-.dsc-pop-rule{height:1px;margin:9px 0 6px;background:var(--dsc-line)}
+.dsc-pop-rule{height:1px;margin:10px 0 7px;background:var(--dsc-line)}
 .dsc-pop-rows{display:flex;flex-direction:column}
-.dsc-pop-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:10px;padding:2px 0;font-size:11px}
+.dsc-pop-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:baseline;gap:10px;padding:3px 0;font-size:13px}
 .dsc-pop-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsc-mute)}
 .dsc-pop-row>b{font-weight:500;color:var(--dsc-soft);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
-.dsc-pop-row>small{min-width:54px;font-size:10.5px;font-weight:500;color:var(--dsc-ink);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
-.dsc-pop-note{margin:5px 0 0;font-size:10px;line-height:1.5;color:var(--dsw-alias-state-warn-primary)}
-.dsc-pop-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:7px;font-size:10px;color:var(--dsc-mute);font-variant-numeric:tabular-nums}
+.dsc-pop-row>small{min-width:60px;font-size:12.5px;font-weight:500;color:var(--dsc-ink);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.dsc-pop-note{margin:6px 0 0;font-size:11.5px;line-height:1.5;color:var(--dsw-alias-state-warn-primary)}
+.dsc-pop-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;font-size:12px;color:var(--dsc-mute);font-variant-numeric:tabular-nums}
 .dsc-pop-foot>span{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .dsc-pop-foot b{font-weight:500;color:var(--dsc-soft)}
 .dsc-pop-foot i{font-style:normal;opacity:.45}
-.dsc-pop-refresh{display:grid;place-items:center;flex:none;width:22px;height:22px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsc-mute);cursor:pointer}
+.dsc-pop-refresh{display:grid;place-items:center;flex:none;width:24px;height:24px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsc-mute);cursor:pointer}
 .dsc-pop-refresh:hover:not(:disabled){background:var(--dsc-hover);color:var(--dsc-ink)}
 .dsc-pop-refresh:disabled{opacity:.45;cursor:default}
-.dsc-pop-refresh svg{width:13px;height:13px}
+.dsc-pop-refresh svg{width:14px;height:14px}
 .dsc-pop-refresh .is-spinning{animation:dsc-spin .9s linear infinite}
 
 @keyframes dsc-fade{from{opacity:0}to{opacity:1}}
