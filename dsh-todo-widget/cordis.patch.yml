@@ -1,0 +1,4 @@
+- insert:
+    - id: todo-widget
+      name: '@local/todo-widget'
+      config: {}

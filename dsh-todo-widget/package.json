@@ -1,0 +1,56 @@
+{
+  "name": "@local/todo-widget",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Floating daily to-do window for DeepSeek Harness: per-day lists, completion times, hide-to-bubble, and reminders for unfinished items.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale",
+    "src",
+    "scripts",
+    "test",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node test/model.test.mjs && node test/client.test.mjs",
+    "check": "node scripts/build.mjs && node --check client.js && node --check index.js && node test/model.test.mjs && node test/client.test.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Miaoge-Ge/dsh-plugins.git",
+    "directory": "dsh-todo-widget"
+  },
+  "homepage": "https://github.com/Miaoge-Ge/dsh-plugins/tree/main/dsh-todo-widget#readme",
+  "bugs": {
+    "url": "https://github.com/Miaoge-Ge/dsh-plugins/issues"
+  }
+}

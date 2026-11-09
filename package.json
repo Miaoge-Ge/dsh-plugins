@@ -2,12 +2,13 @@
   "name": "dsh-plugins",
   "version": "0.0.2",
   "private": true,
-  "description": "DeepSeek Harness 插件合集：用量计费、主题工坊、Code 模式",
+  "description": "DeepSeek Harness 插件合集：用量计费、主题工坊、Code 模式、每日待办",
   "type": "module",
   "workspaces": [
     "dsh-session-cost",
     "dsh-theme-atelier",
-    "dsh-code-mode-preset"
+    "dsh-code-mode-preset",
+    "dsh-todo-widget"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
