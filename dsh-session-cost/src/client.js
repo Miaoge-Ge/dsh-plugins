@@ -570,7 +570,7 @@ window.__ModuleLoader__.load({
       const readAccountBalance=async()=>{
         const account=ctx.get('remote.account');
         if(!account?.getBalance)return {ok:false,reason:'unconfigured'};
-        return normalizeBalance(await account.getBalance({version:'0.2.2-rc.1',locale:ctx.locale.getSnapshot().active,timezoneOffsetSeconds:-new Date().getTimezoneOffset()*60}));
+        return normalizeBalance(await account.getBalance({version:hostVersion(globalThis.__DSH_BOOT__),locale:ctx.locale.getSnapshot().active,timezoneOffsetSeconds:-new Date().getTimezoneOffset()*60}));
       };
       const rateForm=ctx.configForms.get('session-cost');
       const updateRates=()=>{try{ledger.setRates(parseRates(rateForm.getSnapshot().value?.rates??'{}'));}catch{ledger.setRates({});}};

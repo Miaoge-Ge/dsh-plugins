@@ -1,11 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dateKey,isPeak,tariffFor,normalizeUsage,compactEvent,foldEvents,summarize,toCSV,parseRates,monthText,dayText,shortDay,dayAxis,addDays,dailyWindow} from '../src/accounting.mjs';
+import {dateKey,isPeak,tariffFor,normalizeUsage,compactEvent,foldEvents,summarize,toCSV,parseRates,monthText,dayText,shortDay,dayAxis,addDays,dailyWindow,hostVersion} from '../src/accounting.mjs';
 import {loadLedger} from '../src/loader.mjs';
 const time=Date.parse('2026-11-06T01:00:00Z');
 const usage={inputTokens:1e6,outputTokens:1e6,cacheReadTokens:1e6,cacheWriteTokens:0};
 const event=(type,seq,data,t=time)=>({type,seq,time:t,data});
 const sample=(seq,model='deepseek-flash',step=1)=>compactEvent(event('assistant/message',seq,{turn:1,step,usage,message:{source:{provider:'deepseek-account',model}}}));
+test('the account client version follows the running host release',()=>{
+  assert.equal(hostVersion({release:{version:'0.2.2-rc.2'}}),'0.2.2-rc.2');
+  assert.equal(hostVersion({release:{version:'0.2.2-rc.3'}}),'0.2.2-rc.3');
+  assert.equal(hostVersion(undefined),'0.2.2-rc.2');
+  assert.equal(hostVersion({release:{}}),'0.2.2-rc.2');
+});
 test('Shanghai day/month boundaries and peak windows do not depend on device timezone',()=>{
   assert.equal(dateKey(Date.parse('2026-10-31T16:00:00Z')),'2026-11-01');
   for(const [iso,peak] of [['2026-11-06T00:59:00Z',false],['2026-11-06T01:00:00Z',true],['2026-11-06T04:00:00Z',false],['2026-11-06T06:00:00Z',true],['2026-11-06T10:00:00Z',false],['2026-11-07T02:00:00Z',false],['2026-10-01T02:00:00Z',false]])assert.equal(isPeak(Date.parse(iso)),peak,iso);

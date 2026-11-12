@@ -31,6 +31,33 @@ test('every override has both modes, and inherited semantics stay native', () =>
   }
 });
 
+test('covers the rc.2 card, hovercard, notification and sidebar surfaces', () => {
+  const surfaces = [
+    'alias-card-fill', 'alias-card-fill-hover', 'alias-card-tile-fill', 'alias-border-selected',
+    'alias-label-on-color', 'alias-hovercard-bg', 'alias-hovercard-label-primary',
+    'alias-hovercard-label-secondary', 'alias-hovercard-label-tertiary', 'alias-toast-action',
+    'alias-tooltip-label', 'alias-trajectory-accent', 'specific-guide-hero',
+    'specific-file-upload-track', 'specific-sidebar-tint', 'specific-sidebar-glass-fill',
+    'specific-sidebar-glass-hover', 'specific-sidebar-glass-collapsed-fill',
+    'specific-sidebar-glass-collapsed-hover', 'specific-sidebar-wash-top',
+    'specific-sidebar-wash-top-clear', 'specific-sidebar-wash-bottom',
+    'specific-sidebar-wash-bottom-clear', 'specific-sidebar-right-flash',
+  ];
+  for (const theme of themes) {
+    const tokens = compileTheme(theme);
+    for (const name of surfaces) {
+      const pair = tokens[`--dsw-${name}`];
+      assert.ok(pair, `${theme.id}: missing --dsw-${name}`);
+      assert.equal(typeof pair.light, 'string', `${theme.id}: ${name} needs a light value`);
+      assert.equal(typeof pair.dark, 'string', `${theme.id}: ${name} needs a dark value`);
+    }
+    // Data visualisation and state colours stay native on purpose.
+    for (const name of ['alias-chart-messages', 'alias-chart-system', 'alias-chart-tools', 'alias-json-tree-string', 'alias-hovercard-state-done', 'alias-hovercard-state-error']) {
+      assert.equal(tokens[`--dsw-${name}`], undefined, `${theme.id}: ${name} must stay native`);
+    }
+  }
+});
+
 test('serif heading tokens reach the shorthand the markdown CSS actually uses', () => {
   for (const theme of themes) {
     const tokens = compileTheme(theme);

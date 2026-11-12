@@ -64,9 +64,43 @@ export function paletteTokens(p, dark) {
   set('alias-bg-document-selection', p.accent + '33');
   set('alias-state-business-tertiary specific-bubble specific-bubble-highlight specific-sidebar-nav-item-active-accent', p.soft);
 
+  // DSH 0.2.2-rc.2 added dedicated card, hovercard, toast-action and sidebar
+  // surface tokens. Without these the new surfaces keep the native palette and
+  // a chosen theme stops at the older controls.
+  set('alias-card-fill', p.surface);
+  set('alias-card-fill-hover', p.soft);
+  set('alias-card-tile-fill', p.soft);
+  set('alias-border-selected', p.accent);
+  set('alias-label-on-color', p.onAccent);
+  set('alias-hovercard-bg', p.raised);
+  set('alias-hovercard-label-primary', p.text);
+  set('alias-hovercard-label-secondary', p.muted);
+  set('alias-hovercard-label-tertiary', p.muted + 'cc');
+  // The light toast sits on the inverted `alias-toast-bg` (the primary text
+  // colour), so its action uses the on-accent foreground instead of the accent.
+  set('alias-toast-action', dark ? p.accent : p.onAccent);
+  set('alias-tooltip-label', dark ? p.text : p.bg);
+  set('alias-trajectory-accent', p.accent);
+  set('specific-guide-hero', p.surface);
+  set('specific-file-upload-track', p.soft);
+
   // Sidebar. The active row is a tinted veil rather than another grey block.
   set('specific-sidebar-fill', p.sidebar);
   set('specific-sidebar-nav-item-active', p.accent + (dark ? '26' : '12'));
+  // Translucent glass and wash layers keep the native depth while following
+  // the palette; the dark sheet lightens with the raised surface, the light
+  // sheet uses the sidebar colour, and the `-clear` pairs fade the gradients
+  // to the same hue.
+  set('specific-sidebar-tint', p.accent + (dark ? '1f' : '10'));
+  set('specific-sidebar-glass-fill', (dark ? p.soft : p.sidebar) + (dark ? '26' : '8c'));
+  set('specific-sidebar-glass-hover', p.soft + (dark ? '33' : '4d'));
+  set('specific-sidebar-glass-collapsed-fill', dark ? p.soft + '26' : 'transparent');
+  set('specific-sidebar-glass-collapsed-hover', dark ? p.soft + '33' : p.accent + '0f');
+  set('specific-sidebar-wash-top', p.accent + (dark ? '14' : '1a'));
+  set('specific-sidebar-wash-top-clear', p.accent + '00');
+  set('specific-sidebar-wash-bottom', p.muted + (dark ? '12' : '17'));
+  set('specific-sidebar-wash-bottom-clear', p.muted + '00');
+  set('specific-sidebar-right-flash', p.accent + '14');
 
   // Code and quoting materials.
   set('alias-markdown-code-block alias-markdown-inline-code specific-login-input', p.code);

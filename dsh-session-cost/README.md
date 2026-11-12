@@ -19,7 +19,7 @@
 
 ## 安装与开发
 
-需要 DeepSeek Harness 0.2.2-rc.1 或兼容版本、Node.js 20+。
+需要 DeepSeek Harness 0.2.2-rc.2 或兼容版本、Node.js 20+。账户接口携带的客户端版本取自运行中的 Harness，升级后无需重新打包插件。
 
 ```powershell
 # 在合集仓库根目录执行

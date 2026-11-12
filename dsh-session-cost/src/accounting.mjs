@@ -1,6 +1,13 @@
 // CNY / million tokens. Verified 2026-11-07 against the official pricing page.
 export const PRICE_SOURCE = 'https://api-docs.deepseek.com/zh-cn/quick_start/pricing/';
 export const PRICE_VERSION = '2026-11-07';
+// The account Remote identifies the requesting UI. Report the running host's
+// release (injected as `window.__DSH_BOOT__.release`) instead of pinning a
+// version at build time, so the platform sees the real client after upgrades.
+export const hostVersion = boot => {
+  const version = boot?.release?.version;
+  return typeof version === 'string' && version ? version : '0.2.2-rc.2';
+};
 export const TARIFFS = {
   'deepseek-flash': { input: 2, cacheRead: .04, cacheWrite: 2, output: 8 },
   'deepseek-v4-pro': { input: 9, cacheRead: .30, cacheWrite: 9, output: 27 },

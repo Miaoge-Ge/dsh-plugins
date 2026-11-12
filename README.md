@@ -11,7 +11,7 @@ DeepSeek Harness 的四个插件，一个仓库统一维护。四个插件独立
 
 ## 安装
 
-需要 Node.js 20+、npm，以及已安装的 DeepSeek Harness。当前适配 Harness **0.2.2-rc.1**。
+需要 Node.js 20+、npm，以及已安装的 DeepSeek Harness。当前适配 Harness **0.2.2-rc.2**。
 
 ```powershell
 git clone https://github.com/Miaoge-Ge/dsh-plugins.git

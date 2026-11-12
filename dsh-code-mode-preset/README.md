@@ -18,6 +18,7 @@ dsh plugin --profile desktop add "C:\path\dsh-plugins\dsh-code-mode-preset"
 - **先读后写保护**：`edit` 需要本会话先读过，`write` 不能覆盖没读过的文件，基于过期读取的写入会被拒绝（`FS_NOT_OBSERVED` / `FS_STALE_VERSION`），而不是覆盖别人刚改的内容。保护覆盖 `read`、`write`、`edit` 三个文件系统工具；本预设不挂载删除工具。
 - **计划模式**：仍然挂载但默认关闭，需要时可以切换。
 - **技能**：挂载 `skill-filesystem` 与 `tool-skill`，自动发现项目 `.dsh/skills`、`.agents/skills` 以及用户 `~/.dsh/skills`、`~/.agents/skills`。用户级或项目级技能无需修改预设即可在 Code 模式会话中使用；这些技能由环境提供，不由本预设打包。
+- **rc.2 标准目录对齐**：跟随 DSH 0.2.2-rc.2 的标准预设，挂载原生 Office 工具 `tool-office`，并按内置默认关闭 `interrupt_agent`（`tool-subagent-control` 的 `interrupt: false`）；委派消息、等待与列举仍可用。
 
 ## 先读后写保护的作用范围
 
@@ -34,7 +35,7 @@ dsh plugin --profile desktop add "C:\path\dsh-plugins\dsh-code-mode-preset"
 
 ## 依赖
 
-需要 DeepSeek Harness 0.2.2-rc.1 或兼容版本，主要配置位于 `cordis.patch.yml`。Git 工作树需要本机 `git`；持久终端在 Windows 需要 pwsh、在 POSIX 需要 bash。`@deepseek-ai/dsh-experimental-worktree` 与 `@deepseek-ai/dsh-experimental-tool-worktree` 属于 Harness 的实验性包，随 Harness 一起提供。
+需要 DeepSeek Harness 0.2.2-rc.2 或兼容版本，主要配置位于 `cordis.patch.yml`。`tool-office` 依赖 rc.2 起随 Harness 提供的 Office 工具；Git 工作树需要本机 `git`；持久终端在 Windows 需要 pwsh、在 POSIX 需要 bash。`@deepseek-ai/dsh-experimental-worktree` 与 `@deepseek-ai/dsh-experimental-tool-worktree` 属于 Harness 的实验性包，随 Harness 一起提供。
 
 ## 开发
 

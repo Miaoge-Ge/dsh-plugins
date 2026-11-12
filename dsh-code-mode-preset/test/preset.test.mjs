@@ -88,6 +88,7 @@ test('the standard catalog survives the preset', () => {
     'tool-todo',
     'tool-web',
     'present',
+    'tool-office',
   ]) {
     assert.ok(byId.has(id), `missing tool row ${id}`);
   }
@@ -95,6 +96,13 @@ test('the standard catalog survives the preset', () => {
   for (const group of ['planning', 'compaction', 'delegation']) {
     assert.equal(byId.get(group)?.group, true, `${group} group must stay mounted`);
   }
+});
+
+test('the delegation tools follow the rc.2 built-in interrupt default', () => {
+  const control = byId.get('delegation')?.config?.find((row) => row.id === 'tool-subagent-control');
+  assert.ok(control, 'tool-subagent-control must stay mounted');
+  assert.equal(control.config?.interrupt, false, 'rc.2 presets disable interrupt_agent');
+  assert.ok(byId.has('tool-office'), 'rc.2 standard catalog includes the native Office tool');
 });
 
 test('the shell tools switch by platform', () => {
