@@ -1,6 +1,6 @@
 # DSH 插件 · DeepSeek Harness Plugins
 
-DeepSeek Harness 的四个插件，一个仓库统一维护。四个插件独立升版：用量计费为 **0.0.6**，主题工坊为 **0.0.6**，Code 模式为 **0.0.4**，每日待办为 **0.0.1**。
+DeepSeek Harness 的四个插件，一个仓库统一维护。四个插件独立升版：用量计费为 **0.0.6**，主题工坊为 **0.0.7**，Code 模式为 **0.0.4**，每日待办为 **0.0.1**。
 
 | 插件 | 目录 | 功能 |
 | --- | --- | --- |
@@ -78,7 +78,7 @@ POSIX 使用 `./scripts/install-skills.sh [--project] [--force]`。默认跳过�
 ```text
 dsh-plugins/
 ├── dsh-session-cost/       # 用量计费 0.0.6
-├── dsh-theme-atelier/      # 主题工坊 0.0.6
+├── dsh-theme-atelier/      # 主题工坊 0.0.7
 ├── dsh-code-mode-preset/   # Code 模式 0.0.4
 ├── dsh-todo-widget/        # 每日待办 0.0.1
 ├── skills/                 # 可选 Agent Skills（非插件）

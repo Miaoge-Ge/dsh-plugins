@@ -22,12 +22,12 @@ window.__ModuleLoader__.load({
       light: {
         bg: '#ffffff', sidebar: '#f5f6f8', surface: '#ffffff', raised: '#ffffff',
         text: '#1f2329', muted: '#5c6370', accent: '#4176e6', line: '#e4e7ec',
-        soft: '#f0f2f5', code: '#f7f8fa',
+        soft: '#f0f2f5', code: '#f7f8fa', onAccent: '#ffffff',
       },
       dark: {
         bg: '#151517', sidebar: '#101012', surface: '#1c1d20', raised: '#232428',
         text: '#e8eaed', muted: '#a0a4ab', accent: '#7aaaff', line: '#33353a',
-        soft: '#292a2e', code: '#191a1d',
+        soft: '#292a2e', code: '#191a1d', onAccent: '#151517',
       },
     };
 
@@ -50,35 +50,35 @@ window.__ModuleLoader__.load({
         '--pv-text': palette.text,
         '--pv-muted': palette.muted,
         '--pv-accent': palette.accent,
+        '--pv-on-accent': palette.onAccent,
         '--pv-line': palette.line,
         '--pv-soft': palette.soft,
+        '--pv-code': palette.code,
         '--pv-rad': `${Math.min(theme.radii[2], 10)}px`,
         '--pv-font': theme.design === 'editorial' || theme.design === 'organic' ? SERIF : 'inherit',
       };
     }
 
-    // A miniature work surface painted from one palette. The theme name sits
-    // in the window's title bar, so the label cannot be mistaken for a caption
-    // that belongs to some other card.
-    function ThemePreview({ theme, scheme, label, applied }) {
+    // A compact conversation makes the palette's hierarchy legible at a glance.
+    function ThemePreview({ theme, scheme, t }) {
       return h('span', { className: 'at-stage', style: previewStyle(theme[scheme], theme), 'aria-hidden': true },
-        h('span', { className: 'at-topbar' },
-          h('span', { className: 'at-topbar-dot' }),
-          h('span', { className: 'at-topbar-name' }, label),
-          applied ? h('span', { className: 'at-topbar-check' }, h(CheckMark)) : null),
         h('span', { className: 'at-workspace' },
           h('span', { className: 'at-rail' },
-            h('span', { className: 'at-rail-mark' }),
-            h('span', { className: 'at-rail-line at-w70' }),
-            h('span', { className: 'at-rail-line at-w50' }),
-            h('span', { className: 'at-rail-line at-w60' })),
+            h('span', { className: 'at-rail-brand' }, h('span', { className: 'at-rail-mark' }), 'atelier'),
+            h('span', { className: 'at-rail-new' }, '+ ', t('previewNew')),
+            h('span', { className: 'at-rail-label' }, t('previewRecent')),
+            h('span', { className: 'at-rail-active' }, t('previewChat')),
+            h('span', { className: 'at-rail-item' }, t('previewNotes'))),
           h('span', { className: 'at-main' },
-            h('span', { className: 'at-type' }, 'Aa'),
-            h('span', { className: 'at-text-line at-w90' }),
-            h('span', { className: 'at-mini-card' },
-              h('span', { className: 'at-mini-line at-w60' }),
-              h('span', { className: 'at-mini-line at-w90' })),
-            h('span', { className: 'at-cta' }))));
+            h('span', { className: 'at-main-toolbar' }, t('previewChat'), h('span', { className: 'at-toolbar-dot' }, '···')),
+            h('span', { className: 'at-preview-content' },
+              h('span', { className: 'at-prompt' }, t('previewPrompt')),
+              h('span', { className: 'at-answer' },
+                h('span', { className: 'at-answer-mark' }, '✳'),
+                h('span', { className: 'at-answer-body' },
+                  h('span', { className: 'at-answer-title' }, t('previewAnswer')),
+                  h('span', { className: 'at-code' }, h('span', null, 'const '), 'theme = ', h('b', null, '"', theme.id, '"')))),
+              h('span', { className: 'at-composer' }, t('previewInput'), h('span', { className: 'at-cta' }, '↑'))))));
     }
 
     function ThemeCard({ theme, scheme, label, applied, disabled, onPick, t }) {
@@ -87,7 +87,10 @@ window.__ModuleLoader__.load({
         'aria-label': `${label}${applied ? ` · ${t('applied')}` : ''}`,
         onClick: () => onPick(theme.id),
       },
-        h(ThemePreview, { theme, scheme, label, applied }));
+        h(ThemePreview, { theme, scheme, t }),
+        h('span', { className: 'at-card-info' },
+          h('span', { className: 'at-card-name' }, label),
+          applied ? h('span', { className: 'at-applied' }, h(CheckMark), t('applied')) : null));
     }
 
     function Atelier({ t, useSettings, useTheme, save, setMode, compatible }) {
@@ -121,6 +124,7 @@ window.__ModuleLoader__.load({
         settings.status === 'ready' && !settings.writable ? h('p', { className: 'at-note' }, t('readOnly')) : null,
 
         h('section', { className: 'at-gallery', 'aria-label': t('collection') },
+          h('div', { className: 'at-section-head' }, h('h2', null, t('collection'))),
           h('div', { className: 'at-grid' }, choices.map(theme => {
             const label = theme.id === 'native' ? t('native') : t(`${theme.id}.name`);
             return h(ThemeCard, {

@@ -25,6 +25,13 @@
     "loading": "Loading theme settings…",
     "unavailable": "Theme settings are not available yet. Reopen Harness.",
     "readOnly": "Settings are read-only. You can browse themes, but cannot save changes.",
-    "unsupported": "This version has no theme layer API. Please update DeepSeek Harness."
+    "unsupported": "This version has no theme layer API. Please update DeepSeek Harness.",
+    "previewNew": "New chat",
+    "previewRecent": "Recent",
+    "previewChat": "Workspace",
+    "previewNotes": "Design notes",
+    "previewPrompt": "Help me organize my ideas",
+    "previewAnswer": "Sure, let’s start here.",
+    "previewInput": "Message…"
   }
 }

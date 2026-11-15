@@ -26,9 +26,9 @@
 .at-page :focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--at-accent));outline-offset:2px}
 
 /* header */
-.at-head{margin-bottom:30px}
+.at-head{margin-bottom:32px;padding-bottom:22px;border-bottom:1px solid var(--at-line)}
 .at-head-copy{min-width:0}
-.at-head h1{font-size:19px;font-weight:600;letter-spacing:-.012em;line-height:1.3}
+.at-head h1{font-size:23px;font-weight:650;letter-spacing:-.025em;line-height:1.25}
 .at-subtitle{margin-top:7px;max-width:56ch;font-size:12.5px;line-height:1.6;color:var(--at-muted)}
 .at-current{display:flex;align-items:center;gap:7px;margin-top:11px;font-size:11.5px;color:var(--at-muted)}
 .at-current i{width:6px;height:6px;border-radius:50%;flex:none;box-shadow:0 0 0 3px color-mix(in oklab,var(--at-accent) 14%,transparent)}
@@ -40,29 +40,41 @@
 /* section headings */
 .at-gallery{margin-bottom:30px}
 .at-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:0 0 14px}
-.at-section-head h2{font-size:12px;font-weight:600;letter-spacing:.02em}
+.at-section-head h2{font-size:13px;font-weight:650;letter-spacing:0}
 
-/* theme cards: the preview is the card; the name lives in its title bar */
-.at-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px 20px}
-.at-card{display:block;min-width:0;padding:0;border:0;background:none;text-align:left}
-.at-stage{position:relative;display:flex;flex-direction:column;height:176px;border:1px solid var(--pv-line);border-radius:calc(var(--dsw-radius-md,10px) + 2px);background:var(--pv-bg);overflow:hidden;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
-.at-card:hover:not(:disabled) .at-stage{transform:translateY(-1px);border-color:color-mix(in oklab,var(--pv-line) 55%,var(--pv-text));box-shadow:0 14px 30px -24px var(--at-shadow)}
+/* A quiet gallery of miniature workspaces. Each palette provides its own
+   surfaces; names and selection live outside the illustration for clarity. */
+.at-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:22px 18px}
+.at-card{display:block;min-width:0;text-align:left;border-radius:12px}
+ .at-stage{position:relative;display:block;height:190px;padding:10px 10px 0;border:1px solid var(--at-line);border-radius:10px;background:var(--pv-sidebar);overflow:hidden;transition:border-color .18s,box-shadow .18s}
+.at-card:hover:not(:disabled) .at-stage{border-color:var(--at-line-strong);box-shadow:0 8px 22px -16px var(--at-shadow)}
 .at-card[aria-pressed="true"] .at-stage{border-color:var(--at-accent);box-shadow:0 0 0 1px var(--at-accent)}
-.at-topbar{display:flex;align-items:center;gap:7px;flex:0 0 26px;padding:0 10px;background:var(--pv-raised);border-bottom:1px solid var(--pv-line)}
-.at-topbar-dot{width:6px;height:6px;border-radius:50%;background:var(--pv-accent);flex:none}
-.at-topbar-name{min-width:0;font-size:11px;font-weight:600;line-height:1;color:var(--pv-text);opacity:.88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.at-topbar-check{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-left:auto;border-radius:50%;background:color-mix(in oklab,var(--pv-accent) 16%,transparent);color:var(--pv-accent);flex:none}
-.at-workspace{display:flex;flex:1;min-height:0}
-.at-rail{display:flex;flex:0 0 27%;max-width:104px;min-width:64px;flex-direction:column;gap:6px;padding:10px 8px;background:var(--pv-sidebar);border-right:1px solid var(--pv-line)}
-.at-rail-mark{width:8px;height:8px;margin-bottom:1px;border-radius:2px;background:var(--pv-accent)}
-.at-rail-line{height:4px;border-radius:2px;background:var(--pv-muted);opacity:.34}
-.at-main{display:flex;flex:1;flex-direction:column;gap:5px;min-width:0;padding:10px}
-.at-type{font-family:var(--pv-font,inherit);font-size:19px;font-weight:500;line-height:1;letter-spacing:-.02em;color:var(--pv-text);opacity:.92}
-.at-text-line{height:3.5px;border-radius:2px;background:var(--pv-muted);opacity:.36}
-.at-mini-card{display:flex;flex-direction:column;gap:4px;margin-top:2px;padding:7px;border:1px solid var(--pv-line);border-radius:var(--pv-rad,7px);background:var(--pv-surface)}
-.at-mini-line{height:3px;border-radius:2px;background:var(--pv-muted);opacity:.42}
-.at-mini-line:first-child{height:4px;background:var(--pv-text);opacity:.5}
-.at-cta{width:32%;height:8px;margin-top:auto;border-radius:999px;background:var(--pv-accent)}
+.at-workspace{display:flex;height:100%;overflow:hidden;border:1px solid var(--pv-line);border-bottom:0;border-radius:6px 6px 0 0;background:var(--pv-bg);box-shadow:0 4px 16px rgb(0 0 0/.1);color:var(--pv-text)}
+.at-rail{display:flex;flex:0 0 28%;min-width:64px;flex-direction:column;gap:3px;padding:10px 6px;background:var(--pv-sidebar);border-right:1px solid var(--pv-line);font-size:8px;line-height:1.3;white-space:nowrap;overflow:hidden}
+.at-rail-brand{display:flex;align-items:center;gap:5px;margin:0 3px 10px;font-size:9px;font-weight:650}
+.at-rail-mark{width:10px;height:10px;border-radius:3px;background:var(--pv-accent);flex:none}
+.at-rail-new,.at-rail-active,.at-rail-item{display:block;padding:5px;border-radius:4px;overflow:hidden;text-overflow:ellipsis}
+.at-rail-new{border:1px solid var(--pv-line)}
+.at-rail-label{margin:8px 5px 1px;color:var(--pv-muted);font-size:7px}
+.at-rail-active{background:var(--pv-soft);font-weight:600}
+.at-rail-item{color:var(--pv-muted)}
+.at-main{display:flex;flex:1;min-width:0;flex-direction:column}
+.at-main-toolbar{height:27px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-bottom:1px solid var(--pv-line);font-size:8px;font-weight:600}
+.at-toolbar-dot{font-size:12px;line-height:1;color:var(--pv-muted)}
+.at-preview-content{display:flex;flex:1;min-height:0;flex-direction:column;gap:9px;width:100%;max-width:230px;margin:0 auto;padding:11px 10px 0;font-size:8px;line-height:1.4}
+.at-prompt{align-self:flex-end;max-width:95%;padding:5px 8px;border-radius:var(--pv-rad,7px);background:var(--pv-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.at-answer{display:flex;gap:6px;min-width:0}
+.at-answer-mark{display:flex;align-items:center;justify-content:center;flex:none;width:14px;height:14px;color:var(--pv-accent);font-size:13px}
+.at-answer-body{display:flex;flex:1;min-width:0;flex-direction:column;gap:6px}
+.at-answer-title{font-family:var(--pv-font,inherit);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.at-code{display:block;padding:7px;border:1px solid var(--pv-line);border-radius:var(--pv-rad,7px);background:var(--pv-code);font:8px/1.3 Consolas,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.at-code span{color:var(--pv-accent)}
+.at-code b{font-weight:400;color:var(--pv-muted)}
+.at-composer{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:auto;padding:6px 7px;border:1px solid var(--pv-line);border-bottom:0;border-radius:var(--pv-rad,7px) var(--pv-rad,7px) 0 0;background:var(--pv-raised);color:var(--pv-muted);white-space:nowrap;overflow:hidden}
+.at-cta{display:flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:5px;background:var(--pv-accent);color:var(--pv-on-accent);font-size:10px;flex:none}
+.at-card-info{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:33px;padding:9px 2px 0}
+.at-card-name{font-size:13px;font-weight:600;line-height:1.3}
+.at-applied{display:inline-flex;align-items:center;gap:4px;color:var(--at-accent);font-size:11px;font-weight:600;white-space:nowrap}
 .at-w90{width:90%}
 .at-w70{width:70%}
 .at-w60{width:60%}
@@ -91,9 +103,9 @@
   .at-subtitle{max-width:none}
 }
 @container(max-width:660px){
-  .at-grid{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+  .at-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 }
-@container(max-width:540px){
+@container(max-width:400px){
   .at-grid{grid-template-columns:minmax(0,1fr)}
   .at-row{align-items:flex-start;flex-direction:column;gap:10px}
 }
@@ -107,5 +119,5 @@
 @media(forced-colors:active){
   .at-stage,.at-segment,.at-switch,.at-note{border:1px solid CanvasText}
   .at-card[aria-pressed="true"] .at-stage{outline:2px solid Highlight;outline-offset:-2px}
-  .at-topbar-check{border:1px solid CanvasText}
+  .at-applied{color:Highlight}
 }

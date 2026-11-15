@@ -25,6 +25,13 @@
     "loading": "正在读取主题设置…",
     "unavailable": "主题设置尚未加载，请重新打开 Harness。",
     "readOnly": "当前设置为只读，可以查看主题，暂时无法保存。",
-    "unsupported": "此版本缺少主题图层接口，请升级 DeepSeek Harness 后使用。"
+    "unsupported": "此版本缺少主题图层接口，请升级 DeepSeek Harness 后使用。",
+    "previewNew": "新对话",
+    "previewRecent": "最近",
+    "previewChat": "工作区",
+    "previewNotes": "设计笔记",
+    "previewPrompt": "帮我整理一下思路",
+    "previewAnswer": "当然，我们从这里开始。",
+    "previewInput": "输入消息…"
   }
 }

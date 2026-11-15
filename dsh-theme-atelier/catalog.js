@@ -3,8 +3,8 @@ export const themes = [
   {
     "id": "obsidian",
     "name": {
-      "zh": "曜石",
-      "en": "Obsidian"
+      "zh": "石墨蓝",
+      "en": "Graphite Blue"
     },
     "design": "minimal",
     "radii": [
@@ -45,8 +45,8 @@ export const themes = [
   {
     "id": "paper",
     "name": {
-      "zh": "纸间",
-      "en": "Paper"
+      "zh": "暖纸",
+      "en": "Warm Paper"
     },
     "design": "editorial",
     "radii": [
@@ -87,8 +87,8 @@ export const themes = [
   {
     "id": "aurora",
     "name": {
-      "zh": "极光",
-      "en": "Aurora"
+      "zh": "霜蓝",
+      "en": "Frost Blue"
     },
     "design": "glass",
     "radii": [
@@ -129,8 +129,8 @@ export const themes = [
   {
     "id": "celadon",
     "name": {
-      "zh": "青瓷",
-      "en": "Celadon"
+      "zh": "海盐青",
+      "en": "Sea Glass"
     },
     "design": "organic",
     "radii": [
@@ -171,8 +171,8 @@ export const themes = [
   {
     "id": "bauhaus",
     "name": {
-      "zh": "构成",
-      "en": "Bauhaus"
+      "zh": "中性灰",
+      "en": "Neutral Gray"
     },
     "design": "geometric",
     "radii": [
@@ -213,8 +213,8 @@ export const themes = [
   {
     "id": "terminal",
     "name": {
-      "zh": "终端",
-      "en": "Terminal"
+      "zh": "炭灰蓝",
+      "en": "Charcoal Blue"
     },
     "design": "terminal",
     "radii": [

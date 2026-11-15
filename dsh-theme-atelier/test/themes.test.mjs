@@ -31,7 +31,7 @@ test('every override has both modes, and inherited semantics stay native', () =>
   }
 });
 
-test('covers the rc.2 card, hovercard, notification and sidebar surfaces', () => {
+test('covers the card, hovercard, notification and sidebar surfaces (rc.2 onward)', () => {
   const surfaces = [
     'alias-card-fill', 'alias-card-fill-hover', 'alias-card-tile-fill', 'alias-border-selected',
     'alias-label-on-color', 'alias-hovercard-bg', 'alias-hovercard-label-primary',
