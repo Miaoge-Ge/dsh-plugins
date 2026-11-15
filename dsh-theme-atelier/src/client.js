@@ -41,27 +41,29 @@ window.__ModuleLoader__.load({
         h('path', { d: 'M2.2 6.2 4.8 8.8 9.8 3.4', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }));
     }
 
-    function previewStyle(palette, theme) {
+    function previewStyle(palette, theme, scheme, signature) {
+      const details = theme.id === 'native' ? null : compileTheme(theme, signature);
       return {
         '--pv-bg': palette.bg,
-        '--pv-sidebar': palette.sidebar,
-        '--pv-surface': palette.surface,
+        '--pv-sidebar': details?.['--dsw-specific-sidebar-fill']?.[scheme] ?? palette.sidebar,
+        '--pv-surface': details?.['--dsw-alias-card-fill']?.[scheme] ?? palette.surface,
+        '--pv-input': details?.['--dsw-specific-input-major']?.[scheme] ?? palette.surface,
         '--pv-raised': palette.raised,
         '--pv-text': palette.text,
         '--pv-muted': palette.muted,
         '--pv-accent': palette.accent,
         '--pv-on-accent': palette.onAccent,
-        '--pv-line': palette.line,
+        '--pv-line': details?.['--dsw-alias-border-l1']?.[scheme] ?? palette.line,
         '--pv-soft': palette.soft,
         '--pv-code': palette.code,
-        '--pv-rad': `${Math.min(theme.radii[2], 10)}px`,
-        '--pv-font': theme.design === 'editorial' || theme.design === 'organic' ? SERIF : 'inherit',
+        '--pv-rad': signature ? `${Math.min(theme.radii[2], 26)}px` : '7px',
+        '--pv-font': signature && ['editorial', 'organic', 'botanical', 'classic'].includes(theme.design) ? SERIF : 'inherit',
       };
     }
 
     // A compact conversation makes the palette's hierarchy legible at a glance.
-    function ThemePreview({ theme, scheme, t }) {
-      return h('span', { className: 'at-stage', style: previewStyle(theme[scheme], theme), 'aria-hidden': true },
+    function ThemePreview({ theme, scheme, signature, t }) {
+      return h('span', { className: `at-stage at-design-${theme.design}`, style: previewStyle(theme[scheme], theme, scheme, signature), 'aria-hidden': true },
         h('span', { className: 'at-workspace' },
           h('span', { className: 'at-rail' },
             h('span', { className: 'at-rail-brand' }, h('span', { className: 'at-rail-mark' }), 'atelier'),
@@ -81,13 +83,13 @@ window.__ModuleLoader__.load({
               h('span', { className: 'at-composer' }, t('previewInput'), h('span', { className: 'at-cta' }, '↑'))))));
     }
 
-    function ThemeCard({ theme, scheme, label, applied, disabled, onPick, t }) {
+    function ThemeCard({ theme, scheme, signature, label, applied, disabled, onPick, t }) {
       return h('button', {
         type: 'button', className: 'at-card', 'aria-pressed': applied, disabled,
         'aria-label': `${label}${applied ? ` · ${t('applied')}` : ''}`,
         onClick: () => onPick(theme.id),
       },
-        h(ThemePreview, { theme, scheme, t }),
+        h(ThemePreview, { theme, scheme, signature, t }),
         h('span', { className: 'at-card-info' },
           h('span', { className: 'at-card-name' }, label),
           applied ? h('span', { className: 'at-applied' }, h(CheckMark), t('applied')) : null));
@@ -128,7 +130,7 @@ window.__ModuleLoader__.load({
           h('div', { className: 'at-grid' }, choices.map(theme => {
             const label = theme.id === 'native' ? t('native') : t(`${theme.id}.name`);
             return h(ThemeCard, {
-              key: theme.id, theme, scheme, label, t,
+              key: theme.id, theme, scheme, signature: value.signature !== false, label, t,
               applied: value.theme === theme.id,
               disabled: locked,
               onPick: id => run(() => save('theme', id)),

@@ -251,5 +251,173 @@ export const themes = [
       "soft": "#353b45",
       "code": "#21252b"
     }
+  },
+  {
+    "id": "moss",
+    "name": {
+      "zh": "苔绿",
+      "en": "Moss Green"
+    },
+    "design": "botanical",
+    "radii": [
+      8,
+      12,
+      18,
+      24,
+      30,
+      36
+    ],
+    "light": {
+      "bg": "#f5f8f3",
+      "sidebar": "#eaf0e7",
+      "surface": "#fcfdfb",
+      "raised": "#ffffff",
+      "text": "#24352b",
+      "muted": "#526658",
+      "accent": "#23633e",
+      "onAccent": "#ffffff",
+      "line": "#cbd8c9",
+      "soft": "#e7efe5",
+      "code": "#f0f5ee"
+    },
+    "dark": {
+      "bg": "#17221b",
+      "sidebar": "#111b15",
+      "surface": "#202d24",
+      "raised": "#29392e",
+      "text": "#e3eee3",
+      "muted": "#afc4b1",
+      "accent": "#8ed0a0",
+      "onAccent": "#102219",
+      "line": "#3c5040",
+      "soft": "#304336",
+      "code": "#1b2920"
+    }
+  },
+  {
+    "id": "lavender",
+    "name": {
+      "zh": "暮紫",
+      "en": "Twilight Violet"
+    },
+    "design": "studio",
+    "radii": [
+      0,
+      0,
+      2,
+      3,
+      4,
+      6
+    ],
+    "light": {
+      "bg": "#f8f6fb",
+      "sidebar": "#f0ecf6",
+      "surface": "#fdfcff",
+      "raised": "#ffffff",
+      "text": "#30293b",
+      "muted": "#665b73",
+      "accent": "#70489b",
+      "onAccent": "#ffffff",
+      "line": "#d9d1e2",
+      "soft": "#eee9f5",
+      "code": "#f5f1f9"
+    },
+    "dark": {
+      "bg": "#211b2a",
+      "sidebar": "#191420",
+      "surface": "#2a2334",
+      "raised": "#332b40",
+      "text": "#eee8f5",
+      "muted": "#c3b6cf",
+      "accent": "#c9a9ec",
+      "onAccent": "#241332",
+      "line": "#4b3f59",
+      "soft": "#403449",
+      "code": "#261e30"
+    }
+  },
+  {
+    "id": "rose",
+    "name": {
+      "zh": "玫瑰灰",
+      "en": "Rose Gray"
+    },
+    "design": "soft",
+    "radii": [
+      14,
+      20,
+      26,
+      32,
+      40,
+      40
+    ],
+    "light": {
+      "bg": "#fbf6f6",
+      "sidebar": "#f4ecec",
+      "surface": "#fffdfd",
+      "raised": "#ffffff",
+      "text": "#3b292d",
+      "muted": "#725d61",
+      "accent": "#a13e5b",
+      "onAccent": "#ffffff",
+      "line": "#e3d1d4",
+      "soft": "#f5e9eb",
+      "code": "#f9f0f1"
+    },
+    "dark": {
+      "bg": "#281c20",
+      "sidebar": "#201519",
+      "surface": "#322329",
+      "raised": "#3d2a31",
+      "text": "#f4e7e9",
+      "muted": "#d0b7bc",
+      "accent": "#f0a8b9",
+      "onAccent": "#310f19",
+      "line": "#594047",
+      "soft": "#4b343b",
+      "code": "#2c1d22"
+    }
+  },
+  {
+    "id": "amber",
+    "name": {
+      "zh": "琥珀棕",
+      "en": "Amber Brown"
+    },
+    "design": "classic",
+    "radii": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      6
+    ],
+    "light": {
+      "bg": "#fbf8ef",
+      "sidebar": "#f4eddd",
+      "surface": "#fffdf7",
+      "raised": "#ffffff",
+      "text": "#3c3021",
+      "muted": "#71614d",
+      "accent": "#8c500c",
+      "onAccent": "#ffffff",
+      "line": "#dfd1b9",
+      "soft": "#f2eadb",
+      "code": "#f8f1e5"
+    },
+    "dark": {
+      "bg": "#292116",
+      "sidebar": "#20190f",
+      "surface": "#34291b",
+      "raised": "#403221",
+      "text": "#f4ebdc",
+      "muted": "#cfbda3",
+      "accent": "#e9bc76",
+      "onAccent": "#291a08",
+      "line": "#59472d",
+      "soft": "#4b3b27",
+      "code": "#2e2417"
+    }
   }
 ];

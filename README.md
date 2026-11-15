@@ -1,11 +1,11 @@
 # DSH 插件 · DeepSeek Harness Plugins
 
-DeepSeek Harness 的四个插件，一个仓库统一维护。四个插件独立升版：用量计费为 **0.0.6**，主题工坊为 **0.0.7**，Code 模式为 **0.0.4**，每日待办为 **0.0.1**。
+DeepSeek Harness 的四个插件，一个仓库统一维护。四个插件独立升版：用量计费为 **0.0.6**，主题工坊为 **0.0.8**，Code 模式为 **0.0.4**，每日待办为 **0.0.1**。
 
 | 插件 | 目录 | 功能 |
 | --- | --- | --- |
 | 用量计费 | [dsh-session-cost](./dsh-session-cost) | 范围化消费主数字、账户余额、逐模型可展开明细、分时/每日趋势、输入框计费浮层、CSV、自定义单价 |
-| 主题工坊 | [dsh-theme-atelier](./dsh-theme-atelier) | 六套参考成熟设计系统的明暗配色 + DSH 原生、当前方案预览、原生明暗同步与持久化 |
+| 主题工坊 | [dsh-theme-atelier](./dsh-theme-atelier) | 十套明暗配色 + DSH 原生、当前方案预览、原生明暗同步与持久化 |
 | Code 模式 | [dsh-code-mode-preset](./dsh-code-mode-preset) | 直接实施、Git 纪律与工作树、持久终端、先读后写保护、运行项目检查的编码预设 |
 | 每日待办 | [dsh-todo-widget](./dsh-todo-widget) | 侧边栏整页按天记待办、输入框下方进度快捷条、完成时间、到点与收尾提醒 |
 
@@ -78,7 +78,7 @@ POSIX 使用 `./scripts/install-skills.sh [--project] [--force]`。默认跳过�
 ```text
 dsh-plugins/
 ├── dsh-session-cost/       # 用量计费 0.0.6
-├── dsh-theme-atelier/      # 主题工坊 0.0.7
+├── dsh-theme-atelier/      # 主题工坊 0.0.8
 ├── dsh-code-mode-preset/   # Code 模式 0.0.4
 ├── dsh-todo-widget/        # 每日待办 0.0.1
 ├── skills/                 # 可选 Agent Skills（非插件）

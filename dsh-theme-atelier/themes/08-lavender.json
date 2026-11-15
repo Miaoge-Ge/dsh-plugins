@@ -1,0 +1,42 @@
+{
+  "id": "lavender",
+  "name": {
+    "zh": "暮紫",
+    "en": "Twilight Violet"
+  },
+  "design": "studio",
+  "radii": [
+    0,
+    0,
+    2,
+    3,
+    4,
+    6
+  ],
+  "light": {
+    "bg": "#f8f6fb",
+    "sidebar": "#f0ecf6",
+    "surface": "#fdfcff",
+    "raised": "#ffffff",
+    "text": "#30293b",
+    "muted": "#665b73",
+    "accent": "#70489b",
+    "onAccent": "#ffffff",
+    "line": "#d9d1e2",
+    "soft": "#eee9f5",
+    "code": "#f5f1f9"
+  },
+  "dark": {
+    "bg": "#211b2a",
+    "sidebar": "#191420",
+    "surface": "#2a2334",
+    "raised": "#332b40",
+    "text": "#eee8f5",
+    "muted": "#c3b6cf",
+    "accent": "#c9a9ec",
+    "onAccent": "#241332",
+    "line": "#4b3f59",
+    "soft": "#403449",
+    "code": "#261e30"
+  }
+}

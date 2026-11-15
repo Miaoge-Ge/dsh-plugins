@@ -61,7 +61,7 @@ test('covers the card, hovercard, notification and sidebar surfaces (rc.2 onward
 test('serif heading tokens reach the shorthand the markdown CSS actually uses', () => {
   for (const theme of themes) {
     const tokens = compileTheme(theme);
-    const serif = theme.design === 'editorial' || theme.design === 'organic';
+    const serif = ['editorial', 'organic', 'botanical', 'classic'].includes(theme.design);
     for (const level of [1, 2, 3]) {
       const family = tokens[`--dsw-font-markdown-h${level}-font-family`];
       const shorthand = tokens[`--dsw-font-markdown-h${level}`];
@@ -158,4 +158,28 @@ test('metadata, translated UI and distributable entry points are complete', asyn
   assert.ok(css.includes('prefers-reduced-motion')); assert.ok(css.includes('forced-colors'));
   assert.ok(!css.includes('!important') || css.includes('prefers-reduced-motion'));
   assert.ok(!/https?:|@import|url\(/.test(css));
+});
+
+
+test('new design languages apply distinct details only when enabled', () => {
+  const ids = ['moss', 'lavender', 'rose', 'amber'];
+  const designs = ids.map(id => themes.find(theme => theme.id === id));
+  assert.ok(designs.every(Boolean));
+  assert.equal(new Set(designs.map(theme => theme.design)).size, ids.length);
+  assert.equal(new Set(designs.map(theme => theme.radii.join(','))).size, ids.length);
+  for (const theme of designs) {
+    const full = compileTheme(theme), paletteOnly = compileTheme(theme, false);
+    for (const mode of ['light', 'dark']) {
+      assert.notEqual(full['--dsw-specific-sidebar-fill'][mode], paletteOnly['--dsw-specific-sidebar-fill'][mode]);
+      assert.notEqual(full['--dsw-alias-card-fill'][mode], paletteOnly['--dsw-alias-card-fill'][mode]);
+      for (const surface of ['--dsw-specific-sidebar-fill', '--dsw-alias-card-fill', '--dsw-specific-input-major']) {
+        for (const foreground of ['text', 'muted', 'accent']) {
+          assert.ok(contrast(theme[mode][foreground], full[surface][mode]) >= 4.5, `${theme.id}/${mode}: ${foreground} on ${surface}`);
+        }
+      }
+      assert.equal(paletteOnly['--dsw-font-markdown-h1-font-weight'], undefined);
+      assert.equal(paletteOnly['--dsw-shadow-lv3'], undefined);
+      assert.ok(full['--dsw-shadow-lv3'][mode]);
+    }
+  }
 });

@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "主题工坊 · Atelier",
-    "description": "六套参考成熟产品设计系统的明暗配色，以及 DSH 原生主题；原生设置持久化，可扩展、可恢复。"
+    "description": "十套明暗配色，以及 DSH 原生主题；原生设置持久化，可扩展、可恢复。"
   },
   "ui": {
     "title": "主题工坊",
@@ -13,7 +13,7 @@
     "appearance": "明暗模式",
     "appearanceDescription": "与原生外观设置同步，支持跟随系统；切换后上方预览会同步更新。",
     "signature": "设计细节",
-    "signatureDescription": "使用主题圆角与衬线标题；关闭后只保留配色。",
+    "signatureDescription": "使用主题的圆角、标题与表面细节；关闭后只保留配色。",
     "light": "浅色",
     "dark": "深色",
     "system": "跟随系统",

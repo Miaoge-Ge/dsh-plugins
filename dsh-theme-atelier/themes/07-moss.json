@@ -1,0 +1,42 @@
+{
+  "id": "moss",
+  "name": {
+    "zh": "苔绿",
+    "en": "Moss Green"
+  },
+  "design": "botanical",
+  "radii": [
+    8,
+    12,
+    18,
+    24,
+    30,
+    36
+  ],
+  "light": {
+    "bg": "#f5f8f3",
+    "sidebar": "#eaf0e7",
+    "surface": "#fcfdfb",
+    "raised": "#ffffff",
+    "text": "#24352b",
+    "muted": "#526658",
+    "accent": "#23633e",
+    "onAccent": "#ffffff",
+    "line": "#cbd8c9",
+    "soft": "#e7efe5",
+    "code": "#f0f5ee"
+  },
+  "dark": {
+    "bg": "#17221b",
+    "sidebar": "#111b15",
+    "surface": "#202d24",
+    "raised": "#29392e",
+    "text": "#e3eee3",
+    "muted": "#afc4b1",
+    "accent": "#8ed0a0",
+    "onAccent": "#102219",
+    "line": "#3c5040",
+    "soft": "#304336",
+    "code": "#1b2920"
+  }
+}

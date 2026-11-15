@@ -1,0 +1,42 @@
+{
+  "id": "rose",
+  "name": {
+    "zh": "玫瑰灰",
+    "en": "Rose Gray"
+  },
+  "design": "soft",
+  "radii": [
+    14,
+    20,
+    26,
+    32,
+    40,
+    40
+  ],
+  "light": {
+    "bg": "#fbf6f6",
+    "sidebar": "#f4ecec",
+    "surface": "#fffdfd",
+    "raised": "#ffffff",
+    "text": "#3b292d",
+    "muted": "#725d61",
+    "accent": "#a13e5b",
+    "onAccent": "#ffffff",
+    "line": "#e3d1d4",
+    "soft": "#f5e9eb",
+    "code": "#f9f0f1"
+  },
+  "dark": {
+    "bg": "#281c20",
+    "sidebar": "#201519",
+    "surface": "#322329",
+    "raised": "#3d2a31",
+    "text": "#f4e7e9",
+    "muted": "#d0b7bc",
+    "accent": "#f0a8b9",
+    "onAccent": "#310f19",
+    "line": "#594047",
+    "soft": "#4b343b",
+    "code": "#2c1d22"
+  }
+}

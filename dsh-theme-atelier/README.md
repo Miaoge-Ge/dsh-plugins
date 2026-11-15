@@ -1,8 +1,8 @@
 # 主题工坊 · Atelier
 
-为 DeepSeek Harness 设计的原生主题插件。六套自有风格名，每套提供浅色与深色两版；另加 DSH 原生主题作为同组可选项，兼容原生“跟随系统”。
+为 DeepSeek Harness 设计的原生主题插件。十套自有风格名，每套提供浅色与深色两版；另加 DSH 原生主题作为同组可选项，兼容原生“跟随系统”。
 
-这一版不再自行“调”一套偏灰的配色，而是参考成熟产品与编辑器社区长期验证过的设计系统：Claude 的暖纸与陶土橙、GitHub 的中性灰与清晰蓝、Nord 的极地蓝灰、Solarized 的米色与深青、VS Code Modern 的灰阶、One Dark 的炭灰。借用的是它们的色阶关系、单一强调色与层级秩序；所有色值重新做过对比度校验，不是官方主题，也没有复制其资源。界面只显示自有风格名，参考对象只出现在说明文档里。
+前六套参考成熟产品与编辑器社区长期验证过的设计系统：Claude 的暖纸与陶土橙、GitHub 的中性灰与清晰蓝、Nord 的极地蓝灰、Solarized 的米色与深青、VS Code Modern 的灰阶、One Dark 的炭灰。借用的是它们的色阶关系、单一强调色与层级秩序；所有色值重新做过对比度校验，不是官方主题，也没有复制其资源。界面只显示自有风格名，参考对象只出现在说明文档里。
 
 | 主题 | 设计参考 | 说明 |
 | --- | --- | --- |
@@ -12,6 +12,10 @@
 | 海盐青 Sea Glass | Solarized | 米色、青瓷与深青 |
 | 中性灰 Neutral Gray | VS Code Modern | 克制的灰阶与单一蓝 |
 | 炭灰蓝 Charcoal Blue | One Dark | 炭灰底与开发者蓝 |
+| 苔绿 Moss Green | 自然工作室 | 自然绿、柔和圆角与衬线标题 |
+| 暮紫 Twilight Violet | 现代工作室 | 低饱和紫、紧凑轮廓与清晰边界 |
+| 玫瑰灰 Rose Gray | 柔和对话 | 大圆角、暖灰与柔和表面 |
+| 琥珀棕 Amber Brown | 经典书房 | 暖纸色、细圆角与衬线标题 |
 | DSH 原生 | DeepSeek Harness | 内置外观，不叠加任何主题图层 |
 
 ## 外观
@@ -32,7 +36,7 @@
 已构建的压缩包可在 Harness 插件管理中按本地包安装，也可以使用官方 CLI：
 
 ```powershell
-dsh plugin --profile desktop add "C:\path\local-dsh-theme-atelier-0.0.7.tgz"
+dsh plugin --profile desktop add "C:\path\local-dsh-theme-atelier-0.0.8.tgz"
 ```
 
 Web 版把 `desktop` 换成 `web`。若使用源码目录链接安装：
@@ -53,7 +57,7 @@ dsh plugin --profile desktop add "C:\path\dsh-plugins\dsh-theme-atelier"
 1. 复制 `themes/01-obsidian.json`，改成新的文件名、唯一 `id` 与中英文名称。名称就是卡片上显示的主题风格名，不需要再写说明或描述。
 2. 修改 `light` / `dark` 两组颜色。每组只需 11 个六位十六进制颜色：`bg`、`sidebar`、`surface`、`raised`、`text`、`muted`、`accent`、`onAccent`、`line`、`soft`、`code`。
 3. `radii` 的六个整数依次对应 xs、sm、md、lg、xl、panel 圆角，范围 0–40。
-4. `design` 选择 `minimal`、`editorial`、`glass`、`organic`、`geometric`、`terminal`；`editorial` 与 `organic` 会为 Markdown 一至三级标题启用衬线字体。
+4. `design` 选择 `minimal`、`editorial`、`glass`、`organic`、`geometric`、`terminal`、`botanical`、`studio`、`soft`、`classic`；`editorial`、`organic`、`botanical` 与 `classic` 会为 Markdown 一至三级标题启用衬线字体。
 5. 运行 `npm.cmd run check`，重启 Harness。目录中的 JSON 会自动进入主题列表和 Host 设置枚举，无需修改页面代码。
 
 构建会检查唯一 ID、配色完整性、数据类型，以及正文、次要文字、强调文字在六种主要背景上的 4.5:1 对比度。新增主题未通过检查时不会覆盖已有构建文件。
@@ -83,6 +87,6 @@ dsh plugin --profile desktop add "C:\path\dsh-plugins\dsh-theme-atelier"
 
 ## 验证
 
-`npm.cmd run check` 会构建六套主题、检查 12 套配色在六种背景上的文字对比度与强调按钮文字对比度，并运行 10 项主题、生命周期与资源测试。测试另确认派生悬停色与强调色可区分、边框为六位十六进制、rc.2 起引入的表面令牌在 rc.3 仍然齐全，以及衬线标题令牌重写了 Markdown 标题实际使用的 `font` 简写。
+`npm.cmd run check` 会构建十套主题、检查 20 套配色在六种背景上的文字对比度与强调按钮文字对比度，并运行 11 项主题、生命周期与资源测试。测试另确认派生悬停色与强调色可区分、边框为六位十六进制、rc.2 起引入的表面令牌在 rc.3 仍然齐全，以及衬线标题令牌重写了 Markdown 标题实际使用的 `font` 简写。
 
 设置页的视觉与交互仍建议在真实页面中复核：切换明暗、应用每套主题、刷新后恢复、恢复原生、窄屏单列。当前仓库的自动化测试不包含浏览器截图，视觉结论以运行中的 Harness 页面为准。

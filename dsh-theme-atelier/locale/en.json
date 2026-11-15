@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Theme atelier",
-    "description": "Six palettes informed by mature design systems, plus the DSH original theme, with native settings and reversible token layers."
+    "description": "Ten light and dark palettes, plus the DSH original theme, with native settings and reversible token layers."
   },
   "ui": {
     "title": "Theme atelier",
@@ -13,7 +13,7 @@
     "appearance": "Appearance",
     "appearanceDescription": "Uses native appearance settings, including your system preference. The previews above follow the active mode.",
     "signature": "Design details",
-    "signatureDescription": "Theme corners and serif headings. Turn off for palette only.",
+    "signatureDescription": "Use theme-specific corners, headings and surfaces. Turn off for palette only.",
     "light": "Light",
     "dark": "Dark",
     "system": "System",

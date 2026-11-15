@@ -14,7 +14,7 @@ export function validateTheme(theme) {
   for (const key of ['name']) {
     if (!theme[key] || ['zh', 'en'].some(lang => typeof theme[key][lang] !== 'string' || !theme[key][lang].trim())) throw new Error(`${theme.id}: ${key} requires zh and en`);
   }
-  if (!['minimal', 'editorial', 'glass', 'organic', 'geometric', 'terminal'].includes(theme.design)) throw new Error(`${theme.id}: invalid design`);
+  if (!['minimal', 'editorial', 'glass', 'organic', 'geometric', 'terminal', 'botanical', 'studio', 'soft', 'classic'].includes(theme.design)) throw new Error(`${theme.id}: invalid design`);
   if (!Array.isArray(theme.radii) || theme.radii.length !== 6 || theme.radii.some(x => !Number.isInteger(x) || x < 0 || x > 40)) throw new Error(`${theme.id}: invalid radii`);
   for (const mode of ['light', 'dark']) {
     for (const key of paletteKeys) if (!/^#[\da-f]{6}$/i.test(theme[mode]?.[key] ?? '')) throw new Error(`${theme.id}.${mode}.${key}: use a six-digit hex color`);
@@ -132,6 +132,35 @@ export function compileTheme(theme, signature = true) {
   const light = paletteTokens(theme.light, false), dark = paletteTokens(theme.dark, true);
   const tokens = Object.fromEntries(Object.keys(light).map(key => [key, { light: light[key], dark: dark[key] }]));
   if (signature) {
+    // Each new design language changes existing public surfaces as well as
+    // colour: quiet tonal panels, a structured studio, soft layers, or rules.
+    const treatments = {
+      botanical: { sidebar: .10, card: .05, input: .05, border: .08, heading: '600', shadow: '0 8px 24px #00000024' },
+      studio: { sidebar: .025, card: .02, input: .015, border: .32, heading: '650', shadow: '0 2px 0 #00000038' },
+      soft: { sidebar: .10, card: .08, input: .07, border: .04, heading: '600', shadow: '0 12px 32px #00000030' },
+      classic: { sidebar: .06, card: .025, input: .025, border: .30, heading: '700', shadow: '0 3px 0 #00000040' },
+    };
+    const treatment = treatments[theme.design];
+    if (treatment) {
+      for (const mode of ['light', 'dark']) {
+        const p = theme[mode];
+        tokens['--dsw-specific-sidebar-fill'][mode] = mix(p.sidebar, p.accent, treatment.sidebar);
+        tokens['--dsw-alias-card-fill'][mode] = mix(p.surface, p.accent, treatment.card);
+        tokens['--dsw-specific-input-major'][mode] = mix(p.surface, p.accent, treatment.input);
+        tokens['--dsw-elevation-stroke-color'][mode] = mix(p.line, p.text, treatment.border);
+        for (const level of ['lv1', 'lv2', 'lv3']) {
+          const key = `--dsw-shadow-${level}`;
+          tokens[key] ??= {};
+          tokens[key][mode] = treatment.shadow;
+        }
+        tokens['--dsw-alias-border-l1'][mode] = mix(p.line, p.text, treatment.border);
+        for (const level of [1, 2, 3]) {
+          const key = `--dsw-font-markdown-h${level}-font-weight`;
+          tokens[key] ??= {};
+          tokens[key][mode] = treatment.heading;
+        }
+      }
+    }
     ['xs', 'sm', 'md', 'lg', 'xl', 'panel'].forEach((name, i) => {
       tokens[`--dsw-radius-${name}`] = { light: `${theme.radii[i]}px`, dark: `${theme.radii[i]}px` };
     });
@@ -140,7 +169,7 @@ export function compileTheme(theme, signature = true) {
     // shorthand (`font: var(--dsw-font-markdown-h1)`), so overriding only the
     // family token would never reach a heading. Rebuild the shorthand from the
     // host's own weight/size/line-height tokens, keeping its responsive scale.
-    if (theme.design === 'editorial' || theme.design === 'organic') {
+    if (['editorial', 'organic', 'botanical', 'classic'].includes(theme.design)) {
       const serif = '"Sitka Display", "Palatino Linotype", "Book Antiqua", Charter, Georgia, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", SimSun, serif';
       for (const level of [1, 2, 3]) {
         const family = `--dsw-font-markdown-h${level}-font-family`;

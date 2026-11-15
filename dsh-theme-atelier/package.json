@@ -1,7 +1,7 @@
 {
   "name": "@local/dsh-theme-atelier",
-  "version": "0.0.7",
-  "description": "Theme atelier for DeepSeek Harness — six original design languages informed by mature systems, plus the DSH original theme, with native settings and reversible token layers.",
+  "version": "0.0.8",
+  "description": "Theme atelier for DeepSeek Harness — ten original theme palettes, plus the DSH original theme, with native settings and reversible token layers.",
   "private": true,
   "type": "module",
   "license": "MIT",

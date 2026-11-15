@@ -1,0 +1,42 @@
+{
+  "id": "amber",
+  "name": {
+    "zh": "琥珀棕",
+    "en": "Amber Brown"
+  },
+  "design": "classic",
+  "radii": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    6
+  ],
+  "light": {
+    "bg": "#fbf8ef",
+    "sidebar": "#f4eddd",
+    "surface": "#fffdf7",
+    "raised": "#ffffff",
+    "text": "#3c3021",
+    "muted": "#71614d",
+    "accent": "#8c500c",
+    "onAccent": "#ffffff",
+    "line": "#dfd1b9",
+    "soft": "#f2eadb",
+    "code": "#f8f1e5"
+  },
+  "dark": {
+    "bg": "#292116",
+    "sidebar": "#20190f",
+    "surface": "#34291b",
+    "raised": "#403221",
+    "text": "#f4ebdc",
+    "muted": "#cfbda3",
+    "accent": "#e9bc76",
+    "onAccent": "#291a08",
+    "line": "#59472d",
+    "soft": "#4b3b27",
+    "code": "#2e2417"
+  }
+}
