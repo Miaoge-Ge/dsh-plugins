@@ -79,7 +79,17 @@ export function compactEvent(event) {
   if (type === 'assistant/message' || type === 'assistant/attempt') {
     const sample = data.usage ?? [...(data.stream ?? [])].reverse().find(r => r.type === 'chunk' && r.chunk?.type === 'usage')?.chunk.usage;
     const source = data.message?.source;
-    return {type,seq,time,data:{turn:data.turn,step:data.step,usage:sample,source:source ? {provider:source.provider,model:source.model} : undefined}};
+    // Persisted assistant events carry the streamed chunk timeline. Its span is
+    // the generation/decode window, so TPS does not inherit queueing or the
+    // first-token wait. Keep only the scalar, never the chunks themselves.
+    let first, last;
+    for (const entry of Array.isArray(data.stream) ? data.stream : []) {
+      if (!Number.isFinite(entry?.time)) continue;
+      if (first === undefined || entry.time < first) first = entry.time;
+      if (last === undefined || entry.time > last) last = entry.time;
+    }
+    const streamMs = first !== undefined && last !== undefined && last > first ? last - first : undefined;
+    return {type,seq,time,data:{turn:data.turn,step:data.step,usage:sample,source:source ? {provider:source.provider,model:source.model} : undefined,streamMs}};
   }
   if (type === 'request/context') return {type,seq,time,data:{provider:data.provider,model:data.model}};
   if (type === 'step/start' || type === 'llm/retry-started') return {type,seq,time,data:{turn:data.turn,step:data.step}};
@@ -122,10 +132,11 @@ export function foldEvents(events, sessionId) {
     const model = d.source?.model ?? route.model ?? 'unknown';
     const provider = d.source?.provider ?? route.provider ?? 'unknown';
     const tokens = normalizeUsage(d.usage);
-    // A step starts before the provider call and the attempt event arrives when
-    // the reply settles. The delta includes queueing and first-token latency, so
-    // TPS is a comparable estimate rather than pure decode throughput.
-    const durationMs = started !== undefined && e.time > started ? e.time - started : undefined;
+    // Prefer the streamed chunk span (decode window) over the whole step; the
+    // latter includes queueing, TTFT and any scheduling delay before the call.
+    const durationMs = Number.isFinite(d.streamMs) && d.streamMs > 0
+      ? d.streamMs
+      : started !== undefined && e.time > started ? e.time - started : undefined;
     if (!tokens) {rows.set(id, {id,sessionId,invalid:true,time:started ?? e.time,model,provider}); continue;}
     rows.set(id, {id,sessionId,time:started ?? e.time,model,provider,tokens,durationMs});
   }

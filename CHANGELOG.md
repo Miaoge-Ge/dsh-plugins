@@ -77,8 +77,8 @@
 
 - 设置页新增可视化「模型单价」编辑器：按行添加/删除模型，填写 provider/model 与输入、缓存读取、缓存写入、输出四项单价；缓存写入留空按输入价，已知模型提供补全。
 - 模型单价卡片默认折叠为一行，点击展开编辑；新增模型自动展开，保存后恢复折叠。
-- 模型行新增 TPS（输出 tokens / 步骤耗时，含首 token 等待）与缓存命中率；TPS 仅对带 `step/start` 时序的记录显示。
-- 新增 `/provider-balance` 命令：DeepSeek、MIMO 走官方余额接口；GLM、MiniMax 查询套餐额度（接口未公开，失败不显示为 0）；Qwen、腾讯混元提示所需额外凭据。
+- 模型行新增 TPS 与缓存命中率；TPS 改用流式 chunk 的生成时段（不再包含排队和首 token 等待），没有流式记录的旧数据回退到步骤耗时。
+- 设置页新增「厂商余额」区，Host 每 5 分钟自动查询并展示各厂商余额/套餐额度；`/provider-balance` 命令保留用于临时查询。DeepSeek、MIMO 走官方余额接口；GLM、MiniMax 查询套餐额度（接口未公开，失败不显示为 0）；Qwen、腾讯混元提示所需额外凭据。
 - 预置 Qwen qwen3.8-flash、GLM glm5.3-flash、MIMO mimo-v2.6-pro / mimo-v2.6-flash、MiniMax MiniMax-M3.1-Flash 的自定义单价（元 / 百万 tokens，缓存写入暂按输入价），可在界面修改或清空。
 - 新增 deepseek-v4.1-flash 与 deepseek-v4.1-flash-1017 的 Flash 峰谷价别名。
 - 保留 DeepSeek 内置峰谷计价；第三方自定义单价不参与峰谷折扣。

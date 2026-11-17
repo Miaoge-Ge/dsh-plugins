@@ -196,6 +196,18 @@
 .dsc-rate-msg{font-size:10.5px;color:var(--dsc-mute)}
 .dsc-rate-hint{margin-top:9px;font-size:10.5px;line-height:1.65;color:var(--dsc-mute)}
 
+/* ── provider balances ────────────────────────────────── */
+.dsc-balances{margin-top:28px;padding-top:14px;border-top:1px solid var(--dsc-line)}
+.dsc-balances .dsc-section{margin-top:0}
+.dsc-balance-list{margin-top:8px;border-top:1px solid var(--dsc-line)}
+.dsc-balance-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:9px 2px;border-bottom:1px solid var(--dsc-line);font-size:11.5px}
+.dsc-balance-row span{flex:none;color:var(--dsc-mute)}
+.dsc-balance-row b{font-weight:500;text-align:right;color:var(--dsc-soft);overflow-wrap:anywhere}
+.dsc-balance-row.is-error b{color:var(--dsw-alias-state-error-primary)}
+.dsc-balance-loading,.dsc-balance-error,.dsc-balance-empty,.dsc-balance-note{margin-top:8px;font-size:11px;line-height:1.65;color:var(--dsc-mute)}
+.dsc-balance-note{margin-top:9px;font-size:10.5px}
+.dsc-balance-error{color:var(--dsw-alias-state-error-primary)}
+
 /* ── composer dock pill ────────────────────────────────── */
 .dsc-anchor{display:inline-flex;min-width:0;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px))}
 .dsc-pill{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:1px 7px;border:0;border-radius:var(--dsw-radius-sm,6px);background:transparent;color:var(--dsw-alias-label-tertiary);font:inherit;line-height:inherit;font-variant-numeric:tabular-nums;white-space:nowrap;transition:background .12s,color .12s}

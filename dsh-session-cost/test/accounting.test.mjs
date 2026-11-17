@@ -10,7 +10,7 @@ test('TPS aggregates timed output and cache hit is available per model',()=>{
   const events=[
     event('request/context',1,{provider:'qwen',model:'qwen3.8-flash'}),
     event('step/start',2,{turn:1,step:1},1000),
-    event('assistant/message',3,{turn:1,step:1,usage:{inputTokens:100,cacheReadTokens:300,cacheWriteTokens:0,outputTokens:50,totalTokens:450}},2000),
+    compactEvent(event('assistant/message',3,{turn:1,step:1,usage:{inputTokens:100,cacheReadTokens:300,cacheWriteTokens:0,outputTokens:50,totalTokens:450},stream:[{time:1500},{time:2500}]},5000)),
   ];
   const [row]=foldEvents(events,'s');
   assert.equal(row.durationMs,1000);

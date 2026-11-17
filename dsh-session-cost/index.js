@@ -115,6 +115,27 @@ const BALANCE_PROVIDERS = [
   { id: 'hunyuan', label: '腾讯混元', message: '需腾讯云 SecretId/SecretKey 调用财务 API；当前未配置' },
 ];
 
+async function balanceRows(ctx, providers) {
+  const rows = [];
+  for (const provider of providers) {
+    if (provider.message) {
+      rows.push({id: provider.id, label: provider.label, detail: provider.message, status: 'note'});
+      continue;
+    }
+    const key = await resolveSecret(ctx, provider.keys);
+    if (!key) {
+      rows.push({id: provider.id, label: provider.label, detail: `未配置 ${provider.keys.join(' / ')}`, status: 'missing'});
+      continue;
+    }
+    try {
+      rows.push({id: provider.id, label: provider.label, detail: await provider.run(key), status: 'ok'});
+    } catch (error) {
+      rows.push({id: provider.id, label: provider.label, detail: `查询失败：${error?.message ?? error}`, status: 'error'});
+    }
+  }
+  return rows;
+}
+
 async function runBalance(ctx, rawInput) {
   const query = (rawInput ?? '').trim().toLowerCase();
   const selected = query
@@ -123,30 +144,49 @@ async function runBalance(ctx, rawInput) {
   if (!selected.length) {
     return { kind: 'error', text: `未知厂商：${rawInput}。可用：${BALANCE_PROVIDERS.map(provider => provider.id).join('、')}` };
   }
-  const lines = [];
-  for (const provider of selected) {
-    if (provider.message) { lines.push(`${provider.label}  ${provider.message}`); continue; }
-    const key = await resolveSecret(ctx, provider.keys);
-    if (!key) { lines.push(`${provider.label}  未配置 ${provider.keys.join(' / ')}`); continue; }
-    try {
-      lines.push(`${provider.label}  ${await provider.run(key)}`);
-    } catch (error) {
-      lines.push(`${provider.label}  查询失败：${error?.message ?? error}`);
-    }
-  }
+  const rows = await balanceRows(ctx, selected);
   return {
     kind: 'success',
     text: [
       '厂商余额（实时查询）',
-      ...lines,
+      ...rows.map(row => `${row.label}  ${row.detail}`),
       '',
       '说明：DeepSeek / MIMO 为现金余额；GLM / MiniMax 为套餐额度；Qwen / 混元需要额外凭据。查询失败不会显示为 0。',
     ].join('\n'),
   };
 }
 
-export const Config = z.object({rates:z.string().default(JSON.stringify(DEFAULT_RATES)).volatile()});
-export function apply(ctx) {
+async function collectBalances(ctx) {
+  return {updatedAt: Date.now(), providers: await balanceRows(ctx, BALANCE_PROVIDERS)};
+}
+
+async function writeBalances(ctx, config) {
+  const data = await collectBalances(ctx);
+  const serialized = JSON.stringify(data);
+  // A volatile field can be updated in place through its reference; this keeps
+  // transient balances out of the profile file when the runtime supports it.
+  const field = config?.balances;
+  if (typeof field?.set === 'function') {
+    try {
+      if (field.get?.() === serialized) return;
+      field.set(serialized);
+      return;
+    } catch {}
+  }
+  const editor = ctx.get('configEditor');
+  const entry = ctx.fiber?.entry;
+  if (!editor || !entry) return;
+  let previous;
+  try { previous = config?.balances?.get?.(); } catch {}
+  if (previous === serialized) return;
+  await editor.edit(entry, current => ({...current, balances: serialized}));
+}
+
+export const Config = z.object({
+  rates:z.string().default(JSON.stringify(DEFAULT_RATES)).volatile(),
+  balances:z.string().default('{}').volatile(),
+});
+export function apply(ctx, config) {
   ctx.inject(['settings','commands'], child => {
     child.effect(() => child.commands.register({
       name: 'provider-balance',
@@ -156,4 +196,25 @@ export function apply(ctx) {
     }));
     child.effect(() => child.settings.configure({auto:false},ctx.fiber));
   });
+  const canUpdateBalances = typeof config?.balances?.set === 'function'
+    || (ctx.get('configEditor') && ctx.fiber?.entry);
+  if (canUpdateBalances) {
+    ctx.effect(() => {
+      let disposed = false, running = false;
+      const refresh = async () => {
+        if (disposed || running) return;
+        running = true;
+        try { await writeBalances(ctx, config); }
+        catch (error) { ctx.logger?.warn?.('session-cost: balance refresh failed', error); }
+        finally { running = false; }
+      };
+      const initial = setTimeout(() => void refresh(), 1500);
+      const interval = setInterval(() => void refresh(), 5 * 60 * 1000);
+      return () => {
+        disposed = true;
+        clearTimeout(initial);
+        clearInterval(interval);
+      };
+    });
+  }
 }

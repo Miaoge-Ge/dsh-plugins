@@ -269,7 +269,7 @@ window.__ModuleLoader__.load({
           h('span',{className:'dsc-model-name'},
             h('b',null,model.model),
             h('small',null,`${model.provider} \u00b7 ${count(model.calls)} \u6b21\u8c03\u7528`),
-            h('small',{className:'dsc-model-meta',title:'TPS = 输出 tokens / 步骤耗时；包含排队与首 token 等待，仅作趋势参考'},`${tps} \u00b7 \u7f13\u5b58\u547d\u4e2d ${cacheHit(model)}`)),
+            h('small',{className:'dsc-model-meta',title:'TPS = 输出 tokens / 流式生成时段；无流式记录时回退到步骤耗时'},`${tps} \u00b7 \u7f13\u5b58\u547d\u4e2d ${cacheHit(model)}`)),
           h('span',{className:'dsc-model-tokens'},
             h('b',null,compact(model.totalTokens)),
             h('small',null,'tokens')),
@@ -422,6 +422,31 @@ window.__ModuleLoader__.load({
           h('span',{className:'dsc-rate-msg',role:'status'},message)));
     }
 
+    function parseBalances(raw) {
+      try {
+        const data = JSON.parse(raw ?? '{}');
+        return data && Array.isArray(data.providers) ? data : null;
+      } catch { return null; }
+    }
+
+    function BalancePanel({rateForm}) {
+      const config = React.useSyncExternalStore(rateForm.subscribe, rateForm.getSnapshot, rateForm.getSnapshot);
+      const data = parseBalances(config.value?.balances);
+      const rows = data?.providers ?? [];
+      return h('section', {className: 'dsc-balances', 'aria-label': '厂商余额'},
+        h('div', {className: 'dsc-section'},
+          h('div', null,
+            h('h2', null, '厂商余额'),
+            h('p', null, data?.updatedAt ? `每 5 分钟自动更新 · ${clock(data.updatedAt)}` : '每 5 分钟自动更新 · 等待首次查询'))),
+        rows.length
+          ? h('div', {className: 'dsc-balance-list'}, rows.map(row =>
+              h('div', {className: `dsc-balance-row${row.status === 'error' ? ' is-error' : ''}`, key: row.id},
+                h('span', null, row.label),
+                h('b', null, row.detail))))
+          : h('p', {className: 'dsc-balance-empty'}, data ? '余额数据为空，稍后自动重试' : '等待 Host 更新余额…'),
+        h('p', {className: 'dsc-balance-note'}, '失败会保留原因，不显示为 0。'));
+    }
+
     function Dashboard({ledger,sessionId,rateForm,readAccountBalance}) {
       const state=useLedger(ledger);
       const [period,setPeriod]=React.useState('today');
@@ -563,8 +588,9 @@ window.__ModuleLoader__.load({
               h('h2',null,'模型单价'),
               h('p',null,'第三方模型按自定义单价计价；DeepSeek 使用内置峰谷价。')),
             h('span',{className:'dsc-rate-unit'},'元 / 百万 tokens')),
-          h(RateEditor,{rates:state.rates??{},rateForm,suggestions:rateSuggestions}),
-          h('p',{className:'dsc-rate-hint'},'厂商余额：在输入框输入 /provider-balance 查询。DeepSeek / MIMO 走官方余额接口，GLM / MiniMax 为套餐额度；Qwen / 混元需要额外凭据。')):null,
+          h(RateEditor,{rates:state.rates??{},rateForm,suggestions:rateSuggestions})):null,
+
+        rateForm?h(BalancePanel,{rateForm}):null,
 
         h('footer',{className:'dsc-foot'},
           h('div',{className:'dsc-foot-line'},
@@ -677,7 +703,13 @@ window.__ModuleLoader__.load({
         return normalizeBalance(await account.getBalance({version:hostVersion(globalThis.__DSH_BOOT__),locale:ctx.locale.getSnapshot().active,timezoneOffsetSeconds:-new Date().getTimezoneOffset()*60}));
       };
       const rateForm=ctx.configForms.get('session-cost');
-      const updateRates=()=>{try{ledger.setRates(parseRates(rateForm.getSnapshot().value?.rates??'{}'));}catch{ledger.setRates({});}};
+      let lastRates;
+      const updateRates=()=>{
+        const raw=rateForm.getSnapshot().value?.rates??'{}';
+        if(raw===lastRates)return;
+        lastRates=raw;
+        try{ledger.setRates(parseRates(raw));}catch{ledger.setRates({});}
+      };
       ctx.effect(()=>rateForm.subscribe(updateRates));updateRates();
       ctx.effect(()=>()=>ledger.dispose());
       ctx.effect(()=>ctx.locale.register(NS,{zh:{title:'\u7528\u91cf\u8ba1\u8d39'},en:{title:'Usage & billing'}}));
