@@ -98,11 +98,11 @@ test('the standard catalog survives the preset', () => {
   }
 });
 
-test('the delegation tools follow the rc.2 built-in interrupt default', () => {
+test('the delegation tools follow the built-in interrupt default (rc.2 onward)', () => {
   const control = byId.get('delegation')?.config?.find((row) => row.id === 'tool-subagent-control');
   assert.ok(control, 'tool-subagent-control must stay mounted');
-  assert.equal(control.config?.interrupt, false, 'rc.2 presets disable interrupt_agent');
-  assert.ok(byId.has('tool-office'), 'rc.2 standard catalog includes the native Office tool');
+  assert.equal(control.config?.interrupt, false, 'built-in presets disable interrupt_agent');
+  assert.ok(byId.has('tool-office'), 'the standard catalog includes the native Office tool');
 });
 
 test('the shell tools switch by platform', () => {

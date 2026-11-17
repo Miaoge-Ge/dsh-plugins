@@ -6,7 +6,7 @@ export const PRICE_VERSION = '2026-11-07';
 // version at build time, so the platform sees the real client after upgrades.
 export const hostVersion = boot => {
   const version = boot?.release?.version;
-  return typeof version === 'string' && version ? version : '0.2.2-rc.2';
+  return typeof version === 'string' && version ? version : '0.2.2-rc.3';
 };
 export const TARIFFS = {
   'deepseek-flash': { input: 2, cacheRead: .04, cacheWrite: 2, output: 8 },
@@ -42,7 +42,7 @@ export function isPeak(time) {
 export function tariffFor(model, provider = 'deepseek') {
   // Never price an unrelated model merely because its name contains "pro".
   if (!/^(deepseek|deepseek-account|deepseek-official)$/i.test(provider)) return undefined;
-  const aliases = ['deepseek-flash', 'deepseek-v4-flash', 'deepseek-v4-flash-vision-exp', 'deepseek-v4.1-flash-1017'];
+  const aliases = ['deepseek-flash', 'deepseek-v4-flash', 'deepseek-v4-flash-vision-exp', 'deepseek-v4.1-flash', 'deepseek-v4.1-flash-1017'];
   const key = aliases.includes(model?.toLowerCase()) ? 'deepseek-flash' : model?.toLowerCase();
   return TARIFFS[key];
 }
@@ -122,15 +122,19 @@ export function foldEvents(events, sessionId) {
     const model = d.source?.model ?? route.model ?? 'unknown';
     const provider = d.source?.provider ?? route.provider ?? 'unknown';
     const tokens = normalizeUsage(d.usage);
+    // A step starts before the provider call and the attempt event arrives when
+    // the reply settles. The delta includes queueing and first-token latency, so
+    // TPS is a comparable estimate rather than pure decode throughput.
+    const durationMs = started !== undefined && e.time > started ? e.time - started : undefined;
     if (!tokens) {rows.set(id, {id,sessionId,invalid:true,time:started ?? e.time,model,provider}); continue;}
-    rows.set(id, {id,sessionId,time:started ?? e.time,model,provider,tokens});
+    rows.set(id, {id,sessionId,time:started ?? e.time,model,provider,tokens,durationMs});
   }
   return [...rows.values(), ...[...web.values()].filter(call => call.settled && !call.failed)];
 }
 const hourOf = time => new Date(time + 8 * 3600000).getUTCHours();
 export function summarize(records, {day, month, sessionId, hour} = {}, rates = {}) {
   const rows = records.filter(r => (!day || dateKey(r.time) === day) && (!month || dateKey(r.time).startsWith(month)) && (!sessionId || r.sessionId === sessionId) && (hour === undefined || hourOf(r.time) === hour));
-  const empty = () => ({cost:0,input:0,cacheRead:0,cacheWrite:0,output:0,totalTokens:0,calls:0,unpriced:0,invalid:0,costs:{input:0,cacheRead:0,cacheWrite:0,output:0,web:0},web:{search:0,fetch:0,requests:0,cost:0}});
+  const empty = () => ({cost:0,input:0,cacheRead:0,cacheWrite:0,output:0,totalTokens:0,calls:0,unpriced:0,invalid:0,durationMs:0,tpsOutput:0,tps:null,cacheRate:0,costs:{input:0,cacheRead:0,cacheWrite:0,output:0,web:0},web:{search:0,fetch:0,requests:0,cost:0}});
   const total = empty(), models = new Map(), days = new Map();
   for (const row of rows) {
     const day = dateKey(row.time);
@@ -157,9 +161,16 @@ export function summarize(records, {day, month, sessionId, hour} = {}, rates = {
         target[key] += row.tokens[key]; target.totalTokens += row.tokens[key];
         target.costs[key] += cost?.[key] ?? 0; target.cost += cost?.[key] ?? 0;
       }
+      if (Number.isFinite(row.durationMs) && row.durationMs > 0) {
+        target.durationMs += row.durationMs;
+        target.tpsOutput += row.tokens.output;
+      }
     }
   }
-  total.cacheRate = total.input + total.cacheRead + total.cacheWrite ? total.cacheRead / (total.input + total.cacheRead + total.cacheWrite) : 0;
+  for (const entry of [total, ...models.values(), ...days.values()]) {
+    entry.cacheRate = entry.input + entry.cacheRead + entry.cacheWrite ? entry.cacheRead / (entry.input + entry.cacheRead + entry.cacheWrite) : 0;
+    entry.tps = entry.durationMs > 0 ? entry.tpsOutput / (entry.durationMs / 1000) : null;
+  }
   return {...total,models:[...models.values()].sort((a,b)=>b.cost-a.cost),days:[...days.values()].sort((a,b)=>a.day.localeCompare(b.day))};
 }
 export function toCSV(summary) {

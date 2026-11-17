@@ -198,6 +198,17 @@ test('the page renders today with its empty state', async () => {
   assert.equal(input.length, 1);
   assert.equal(input[0].props.placeholder, '添加待办，回车保存');
   assert.equal(findByClass(tree, 'tdw-page').length, 1);
+
+  const dayButton = findByClass(tree, 'tdw-day');
+  assert.equal(dayButton.length, 1);
+  assert.equal(dayButton[0].props['aria-expanded'], false);
+  assert.ok(dayButton[0].props['aria-label'].includes('选择日期'));
+  assert.equal(findByClass(tree, 'tdw-dateinput').length, 0);
+
+  const exportButtons = findByClass(tree, 'tdw-btn-sm');
+  assert.equal(exportButtons.length, 2);
+  assert.equal(exportButtons[0].props.disabled, true);
+  assert.equal(exportButtons[1].props.disabled, true);
 });
 
 test('the page offers to carry yesterday unfinished items into today', async () => {
@@ -247,9 +258,13 @@ test('the page lists rows with completion and reminder times', async () => {
   assert.equal(checks.length, 2);
   assert.equal(checks[0].props['aria-checked'], false);
   assert.equal(checks[1].props['aria-checked'], true);
+  const exportButtons = findByClass(tree, 'tdw-btn-sm');
+  assert.equal(exportButtons.length, 2);
+  assert.equal(exportButtons[0].props.disabled, false);
+  assert.equal(exportButtons[1].props.disabled, false);
 });
 
-test('the page settings bind the daily sweep and the composer entry', async () => {
+test('the page settings bind the daily sweep, snooze duration and composer entry', async () => {
   const { registrations, React } = await loadWidget();
   React.reset();
   const tree = render(seat(registrations, 'main'));
@@ -259,6 +274,11 @@ test('the page settings bind the daily sweep and the composer entry', async () =
   assert.equal(boxes[1].props.checked, true);
   const times = findByClass(tree, 'tdw-time');
   assert.ok(times.some(node => node.props.value === '18:00'));
+  const number = findByClass(tree, 'tdw-number');
+  assert.equal(number.length, 1);
+  assert.equal(number[0].props.defaultValue, '10');
+  assert.equal(number[0].props.min, 1);
+  assert.equal(number[0].props.max, 1440);
 });
 
 test('the composer entry shows today progress beside the input', async () => {
@@ -317,6 +337,22 @@ test('an overdue item raises the reminder notice with its actions', async () => 
   assert.ok(text.includes('知道了'));
   assert.ok(text.includes('稍后 10 分钟'));
   assert.equal(findByClass(tree, 'tdw-toast').length, 1);
+});
+
+test('the snooze button follows the configured duration', async () => {
+  const now = Date.now();
+  const today = dayKeyOf(now);
+  const { registrations, React } = await loadWidget({
+    doc: {
+      v: 1,
+      days: { [today]: [item({ id: 'late', text: '交周报', dueAt: now - 60_000 })] },
+      settings: { wrapUpEnabled: false, snoozeMinutes: 25 },
+    },
+  });
+  React.reset();
+  const text = textOf(render(seat(registrations, 'shell.overlay'))).join('');
+  assert.ok(text.includes('稍后 25 分钟'));
+  assert.ok(!text.includes('稍后 10 分钟'));
 });
 
 test('the daily sweep raises the notice when the configured time passed', async () => {

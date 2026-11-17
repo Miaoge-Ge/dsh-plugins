@@ -8,7 +8,7 @@
 
 export const VERSION = 1;
 export const DAY_MS = 24 * 60 * 60 * 1000;
-export const SNOOZE_MS = 10 * 60 * 1000;
+export const DEFAULT_SNOOZE_MINUTES = 10;
 export const BACKLOG_DAYS = 3;
 export const MAX_TEXT = 200;
 export const MAX_DAYS = 400;
@@ -81,6 +81,26 @@ export function isOverdue(item, now) {
   return item.done !== true && Number.isFinite(item.dueAt) && item.dueAt <= now;
 }
 
+/** Replace `{name}` placeholders, the same shape the locale service uses. */
+export function fill(text, values) {
+  return String(text ?? '').replace(/\{(\w+)\}/g, (match, key) => (key in values ? String(values[key]) : match));
+}
+
+/** Localized date with its weekday, e.g. `11月9日 周日`. */
+export function dayLabel(day, t, now) {
+  const date = parseDayKey(day);
+  if (!date) return day;
+  const sameYear = date.getFullYear() === new Date(now).getFullYear();
+  const pattern = t(sameYear ? 'dayFormat' : 'dayFormatYear');
+  return `${fill(pattern, { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() })} ${t(`weekday.${date.getDay()}`)}`;
+}
+
+/** Localized date without the weekday, e.g. `11月9日`. */
+export function dayShort(epoch, t) {
+  const date = new Date(epoch);
+  return fill(t('dayFormat'), { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() });
+}
+
 function defaultSettings() {
   return {
     wrapUpEnabled: true,
@@ -88,6 +108,7 @@ function defaultSettings() {
     wrapUpShownOn: null,
     wrapUpSnoozeUntil: null,
     showDock: true,
+    snoozeMinutes: DEFAULT_SNOOZE_MINUTES,
   };
 }
 
@@ -125,6 +146,8 @@ function normalizeSettings(raw) {
     : null;
   settings.wrapUpSnoozeUntil = Number.isFinite(source.wrapUpSnoozeUntil) ? source.wrapUpSnoozeUntil : null;
   if (source.showDock === false) settings.showDock = false;
+  const snooze = Math.round(Number(source.snoozeMinutes));
+  if (Number.isFinite(snooze) && snooze >= 1 && snooze <= 1440) settings.snoozeMinutes = snooze;
   return settings;
 }
 
@@ -359,17 +382,72 @@ export function acknowledgeReminder(doc, reminder, now, scope = 'all') {
   return next;
 }
 
-/** Snooze: the same popup returns after the interval. */
-export function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
+/**
+ * Snooze: move the reminder itself forward, so the time the page shows is the
+ * time the notice will return. The due time was already in the past, so the
+ * new one is measured from now rather than from the missed moment.
+ */
+export function snoozeReminder(doc, reminder, now, duration = DEFAULT_SNOOZE_MINUTES * 60 * 1000) {
   const until = now + duration;
   let next = doc;
   if (reminder.due.length > 0) {
     const days = { ...next.days };
     for (const { day, item } of reminder.due) {
-      days[day] = (days[day] ?? []).map(row => (row.id === item.id ? { ...row, snoozeUntil: until } : row));
+      days[day] = (days[day] ?? []).map(row => (row.id === item.id
+        ? { ...row, dueAt: until, snoozeUntil: null, remindedAt: null }
+        : row));
     }
     next = { ...next, days };
   }
   if (reminder.wrapUp) next = { ...next, settings: { ...next.settings, wrapUpSnoozeUntil: until } };
   return next;
+}
+
+/* ── export ────────────────────────────────────────────────────────────── */
+
+/**
+ * Complete JSON backup. The wrapper names the format so a future importer can
+ * recognize it without guessing at the document shape.
+ */
+export function exportJson(doc, now) {
+  return JSON.stringify({
+    format: 'dsh-todo-widget',
+    version: VERSION,
+    exportedAt: new Date(now).toISOString(),
+    document: doc,
+  }, null, 2);
+}
+
+/**
+ * Readable Markdown journal of every stored day, oldest first. Keeps the
+ * order the items were added in, so the file reads like the day's notes.
+ */
+export function exportMarkdown(doc, now, t) {
+  const days = Object.keys(doc.days).sort();
+  let total = 0;
+  let done = 0;
+  for (const day of days) {
+    for (const item of doc.days[day]) {
+      total += 1;
+      if (item.done) done += 1;
+    }
+  }
+  const lines = [
+    `# ${t('title')}`,
+    '',
+    `${t('exportedAt')}: ${new Date(now).toLocaleString()}`,
+    fill(t('exportSummary'), { total, done }),
+    '',
+  ];
+  for (const day of days) {
+    lines.push(`## ${dayLabel(day, t, now)}`);
+    for (const item of doc.days[day]) {
+      let line = `- [${item.done ? 'x' : ' '}] ${item.text}`;
+      if (item.done && item.doneAt !== null) line += ` (${fill(t('doneAt'), { time: clockOf(item.doneAt) })})`;
+      else if (!item.done && item.dueAt !== null) line += ` (${t('remindAt')} ${clockOf(item.dueAt)})`;
+      lines.push(line);
+    }
+    lines.push('');
+  }
+  return `${lines.join('\n').trimEnd()}\n`;
 }

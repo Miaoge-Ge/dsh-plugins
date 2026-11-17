@@ -6,11 +6,24 @@ const time=Date.parse('2026-11-06T01:00:00Z');
 const usage={inputTokens:1e6,outputTokens:1e6,cacheReadTokens:1e6,cacheWriteTokens:0};
 const event=(type,seq,data,t=time)=>({type,seq,time:t,data});
 const sample=(seq,model='deepseek-flash',step=1)=>compactEvent(event('assistant/message',seq,{turn:1,step,usage,message:{source:{provider:'deepseek-account',model}}}));
+test('TPS aggregates timed output and cache hit is available per model',()=>{
+  const events=[
+    event('request/context',1,{provider:'qwen',model:'qwen3.8-flash'}),
+    event('step/start',2,{turn:1,step:1},1000),
+    event('assistant/message',3,{turn:1,step:1,usage:{inputTokens:100,cacheReadTokens:300,cacheWriteTokens:0,outputTokens:50,totalTokens:450}},2000),
+  ];
+  const [row]=foldEvents(events,'s');
+  assert.equal(row.durationMs,1000);
+  const summary=summarize([row],{}, {'qwen/qwen3.8-flash':{input:.8,cacheRead:.1,cacheWrite:.8,output:2.7}});
+  assert.equal(summary.models[0].tps,50);
+  assert.equal(summary.tps,50);
+  assert.ok(Math.abs(summary.models[0].cacheRate-.75)<1e-9);
+});
 test('the account client version follows the running host release',()=>{
   assert.equal(hostVersion({release:{version:'0.2.2-rc.2'}}),'0.2.2-rc.2');
   assert.equal(hostVersion({release:{version:'0.2.2-rc.3'}}),'0.2.2-rc.3');
-  assert.equal(hostVersion(undefined),'0.2.2-rc.2');
-  assert.equal(hostVersion({release:{}}),'0.2.2-rc.2');
+  assert.equal(hostVersion(undefined),'0.2.2-rc.3');
+  assert.equal(hostVersion({release:{}}),'0.2.2-rc.3');
 });
 test('Shanghai day/month boundaries and peak windows do not depend on device timezone',()=>{
   assert.equal(dateKey(Date.parse('2026-10-31T16:00:00Z')),'2026-11-01');
@@ -38,6 +51,8 @@ test('date labels keep month and day ranges instead of producing NaN',()=>{
 });
 test('aliases work while unrelated providers and model substrings stay unpriced',()=>{
   assert.ok(tariffFor('deepseek-v4-flash-vision-exp','deepseek-account'));
+  assert.ok(tariffFor('deepseek-v4.1-flash','deepseek-account'));
+  assert.ok(tariffFor('deepseek-v4.1-flash-1017','deepseek-official'));
   assert.equal(tariffFor('other-pro'),undefined);assert.equal(tariffFor('deepseek-v4-pro','third-party'),undefined);
 });
 test('invalid and inconsistent counters are not silently charged as zero',()=>{

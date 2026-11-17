@@ -1,0 +1,64 @@
+{
+  "name": "@local/scratch-lab",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Scratch lab for DeepSeek Harness: a ready-made temporary workspace and a sidebar page that creates named demo sessions in it.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.2-rc.2"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale",
+    "src",
+    "scripts",
+    "test",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node scripts/build.mjs && node --check client.js && node --check index.js && node --test test/*.test.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-api-remotes"
+      ]
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.19.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Miaoge-Ge/dsh-plugins.git",
+    "directory": "dsh-scratch-lab"
+  },
+  "homepage": "https://github.com/Miaoge-Ge/dsh-plugins/tree/main/dsh-scratch-lab#readme",
+  "bugs": {
+    "url": "https://github.com/Miaoge-Ge/dsh-plugins/issues"
+  }
+}

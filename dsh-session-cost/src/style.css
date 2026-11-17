@@ -132,6 +132,7 @@
 .dsc-model-name{min-width:0}
 .dsc-model-name b{display:block;overflow:hidden;font-size:12.5px;font-weight:600;line-height:1.45;text-overflow:ellipsis;white-space:nowrap}
 .dsc-model-name small{display:block;overflow:hidden;font-size:10.5px;color:var(--dsc-mute);line-height:1.45;text-overflow:ellipsis;white-space:nowrap}
+.dsc-model-name .dsc-model-meta{margin-top:1px;color:var(--dsc-soft);opacity:.82;font-size:10px}
 .dsc-model-tokens{text-align:right}
 .dsc-model-tokens b{display:block;font-size:12px;font-weight:500;line-height:1.45;font-variant-numeric:tabular-nums}
 .dsc-model-tokens small{display:block;font-size:9px;letter-spacing:.05em;line-height:1.45;color:var(--dsc-mute);text-transform:uppercase}
@@ -162,18 +163,38 @@
 .dsc-more{margin-top:9px}
 .dsc-prose{margin-top:7px;font-size:10.5px;line-height:1.7;color:var(--dsc-mute)}
 .dsc-prose p+p{margin-top:4px}
-.dsc-rates{margin-top:12px;padding:12px 13px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-md,10px);background:var(--dsc-surface)}
-.dsc-rates-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.dsc-rates-head h3{font-size:11.5px;font-weight:600}
-.dsc-rates-head span{font-size:10px;color:var(--dsc-mute)}
-.dsc-rates p{margin-top:3px;font-size:10.5px;line-height:1.65;color:var(--dsc-mute)}
-.dsc-rates textarea{width:100%;min-height:104px;margin:8px 0;padding:8px 9px;resize:vertical;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-sm,7px);background:var(--dsc-surface-2);font:11px/1.6 ui-monospace,Consolas,monospace}
-.dsc-rate-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dsc-pricing{margin-top:28px;padding-top:14px;border-top:1px solid var(--dsc-line)}
+.dsc-pricing .dsc-section{margin-top:0}
+.dsc-rate-unit{flex:none;font-size:10.5px;color:var(--dsc-mute);letter-spacing:.02em}
+.dsc-rate-editor{margin-top:8px}
+.dsc-rate-note{margin-bottom:9px;font-size:10.5px;line-height:1.7;color:var(--dsc-mute)}
+.dsc-rate-list{display:flex;flex-direction:column;gap:8px}
+.dsc-rate-card{padding:10px 11px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-md,10px);background:var(--dsc-surface)}
+.dsc-rate-head{display:flex;align-items:center;gap:8px}
+.dsc-rate-toggle{display:flex;align-items:center;gap:6px;flex:1;min-width:0;padding:2px 0;border:0;background:transparent;color:inherit;text-align:left}
+.dsc-rate-chevron{flex:none;color:var(--dsc-mute);font-size:14px;line-height:1;transition:transform .12s}
+.dsc-rate-card.is-open .dsc-rate-chevron{transform:rotate(90deg)}
+.dsc-rate-name{flex:none;max-width:46%;overflow:hidden;font-size:11.5px;font-weight:500;color:var(--dsc-ink);text-overflow:ellipsis;white-space:nowrap}
+.dsc-rate-summary{margin-left:auto;overflow:hidden;font-size:10.5px;color:var(--dsc-mute);text-overflow:ellipsis;white-space:nowrap}
+.dsc-rate-body{margin-top:8px}
+.dsc-rate-body .dsc-rate-key{width:100%;flex:none}
+.dsc-rate-key{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.dsc-rate-key span,.dsc-rate-field span{font-size:10px;color:var(--dsc-mute);letter-spacing:.02em}
+.dsc-rate-key input,.dsc-rate-field input{width:100%;height:28px;padding:0 8px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-sm,7px);background:var(--dsc-surface-2);font:11.5px/1.4 var(--dsh-font-family,"Segoe UI","Microsoft YaHei",system-ui,sans-serif);font-variant-numeric:tabular-nums}
+.dsc-rate-key input:focus,.dsc-rate-field input:focus{border-color:var(--dsc-accent);outline:none;box-shadow:0 0 0 1px color-mix(in oklab,var(--dsc-accent) 35%,transparent)}
+.dsc-rate-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
+.dsc-rate-field{display:flex;min-width:0;flex-direction:column;gap:3px}
+.dsc-rate-remove{display:grid;place-items:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:var(--dsw-radius-sm,7px);background:transparent;color:var(--dsc-mute);font-size:16px;line-height:1}
+.dsc-rate-remove:hover{background:var(--dsc-hover);color:var(--dsw-alias-state-error-primary)}
+.dsc-rate-empty{padding:18px 12px;border:1px dashed var(--dsc-line-strong);border-radius:var(--dsw-radius-md,10px);text-align:center;font-size:11px;color:var(--dsc-mute)}
+.dsc-rate-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.dsc-rate-spacer{flex:1}
 .dsc-btn{display:inline-flex;align-items:center;height:26px;padding:0 10px;border:1px solid var(--dsc-line);border-radius:var(--dsw-radius-sm,7px);background:transparent;color:var(--dsc-soft);font-size:11.5px;white-space:nowrap}
 .dsc-btn:hover:not(:disabled){background:var(--dsc-hover);color:var(--dsc-ink)}
 .dsc-btn--primary{border-color:transparent;background:var(--dsc-accent);color:var(--dsw-alias-brand-primary-invert,#fff)}
 .dsc-btn--primary:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover,var(--dsc-accent));color:var(--dsw-alias-brand-primary-invert,#fff)}
 .dsc-rate-msg{font-size:10.5px;color:var(--dsc-mute)}
+.dsc-rate-hint{margin-top:9px;font-size:10.5px;line-height:1.65;color:var(--dsc-mute)}
 
 /* ── composer dock pill ────────────────────────────────── */
 .dsc-anchor{display:inline-flex;min-width:0;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px))}
@@ -255,6 +276,8 @@
   .dsc-rail-fact{width:auto;padding-top:0;border-top:0;justify-content:flex-end}
   .dsc-trend{padding:12px 16px 13px}
   .dsc-buckets{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dsc-rate-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dsc-rate-summary{display:none}
   .dsc-section{margin-top:20px}
 }
 @container(max-width:460px){
@@ -272,6 +295,6 @@
   .dsc,.dsc *,.dsc-pop,.dsc-pop *{animation:none!important;transition:none!important}
 }
 @media(forced-colors:active){
-  .dsc-panel,.dsc-model-tag,.dsc-buckets,.dsc-rates,.dsc-btn,.dsc-pop,.dsc-pop-refresh{border:1px solid CanvasText}
+  .dsc-panel,.dsc-model-tag,.dsc-buckets,.dsc-rate-card,.dsc-rate-empty,.dsc-btn,.dsc-pop,.dsc-pop-refresh{border:1px solid CanvasText}
   .dsc-col i,.dsc-share i,.dsc-progress i,.dsc-tab[aria-pressed="true"]::after{background:Highlight}
 }

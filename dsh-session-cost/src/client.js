@@ -262,12 +262,14 @@ window.__ModuleLoader__.load({
       const share=total>0?model.cost/total:0;
       const pending=(model.unpriced??0)+(model.invalid??0);
       const cost=pending>=model.calls?DASH:money(model.cost);
+      const tps=Number.isFinite(model.tps)&&model.tps>0?`${model.tps.toFixed(1)} TPS`:'TPS \u2014';
       return h('details',{className:'dsc-model'},
         h('summary',{className:'dsc-model-row'},
           h('span',{className:'dsc-model-tag'},tag),
           h('span',{className:'dsc-model-name'},
             h('b',null,model.model),
-            h('small',null,`${model.provider} \u00b7 ${count(model.calls)} \u6b21\u8c03\u7528`)),
+            h('small',null,`${model.provider} \u00b7 ${count(model.calls)} \u6b21\u8c03\u7528`),
+            h('small',{className:'dsc-model-meta',title:'TPS = 输出 tokens / 步骤耗时；包含排队与首 token 等待，仅作趋势参考'},`${tps} \u00b7 \u7f13\u5b58\u547d\u4e2d ${cacheHit(model)}`)),
           h('span',{className:'dsc-model-tokens'},
             h('b',null,compact(model.totalTokens)),
             h('small',null,'tokens')),
@@ -314,18 +316,123 @@ window.__ModuleLoader__.load({
     //#endregion
 
     //#region screen
+    let rateRowSeq=0;
+    const emptyRateRow=()=>({id:`rate-${++rateRowSeq}`,key:'',input:'',cacheRead:'',cacheWrite:'',output:''});
+    const rowsFromRates=rates=>Object.entries(rates??{}).map(([key,rate])=>({
+      id:`rate-${++rateRowSeq}`,
+      key,
+      input:String(rate?.input??''),
+      cacheRead:String(rate?.cacheRead??''),
+      cacheWrite:String(rate?.cacheWrite??''),
+      output:String(rate?.output??''),
+    }));
+
+    function RateEditor({rates,rateForm,suggestions}) {
+      const [rows,setRows]=React.useState(()=>rowsFromRates(rates));
+      const [open,setOpen]=React.useState(()=>new Set());
+      const [message,setMessage]=React.useState('');
+      React.useEffect(()=>{setRows(rowsFromRates(rates));setOpen(new Set());},[rates]);
+      const change=(id,field,value)=>setRows(current=>current.map(row=>row.id===id?{...row,[field]:value}:row));
+      const add=()=>{
+        const row=emptyRateRow();
+        setRows(current=>[...current,row]);
+        setOpen(current=>new Set(current).add(row.id));
+      };
+      const remove=id=>{
+        setRows(current=>current.filter(row=>row.id!==id));
+        setOpen(current=>{const next=new Set(current);next.delete(id);return next;});
+      };
+      const toggle=id=>setOpen(current=>{
+        const next=new Set(current);
+        if(next.has(id))next.delete(id);else next.add(id);
+        return next;
+      });
+      const rateSummary=row=>[row.input&&`输入 ${row.input}`,row.cacheRead&&`缓存读 ${row.cacheRead}`,row.output&&`输出 ${row.output}`].filter(Boolean).join(' · ')||'点击展开填写单价';
+      const number=(text,fallback)=>{
+        if(text.trim()==='')return fallback;
+        const value=Number(text);
+        return Number.isFinite(value)&&value>=0?value:undefined;
+      };
+      const save=async()=>{
+        const cleaned=rows.map(row=>({
+          ...row,
+          key:row.key.trim(),input:row.input.trim(),cacheRead:row.cacheRead.trim(),cacheWrite:row.cacheWrite.trim(),output:row.output.trim(),
+        })).filter(row=>row.key||row.input||row.cacheRead||row.cacheWrite||row.output);
+        const result={}; const errors=[]; const seen=new Set();
+        cleaned.forEach((row,index)=>{
+          const label=row.key||`第 ${index+1} 行`;
+          if(!row.key.includes('/')||row.key.startsWith('/')||row.key.endsWith('/')){errors.push(`${label}：模型键需为 provider/model`);return;}
+          if(seen.has(row.key)){errors.push(`${row.key}：模型重复`);return;}
+          seen.add(row.key);
+          const input=number(row.input,undefined), cacheRead=number(row.cacheRead,0);
+          const cacheWrite=number(row.cacheWrite,input), output=number(row.output,undefined);
+          if(input===undefined){errors.push(`${label}：输入价需为非负数字`);return;}
+          if(cacheRead===undefined){errors.push(`${label}：缓存读取价需为非负数字`);return;}
+          if(cacheWrite===undefined){errors.push(`${label}：缓存写入价需为非负数字`);return;}
+          if(output===undefined){errors.push(`${label}：输出价需为非负数字`);return;}
+          result[row.key]={input,cacheRead,cacheWrite,output};
+        });
+        if(errors.length){setMessage(errors[0]);return;}
+        try{
+          const accepted=await rateForm.set('rates',JSON.stringify(result));
+          setMessage(accepted?'单价已保存，历史记录会按新价格重新计算':'保存失败，请重试');
+          if(accepted)setOpen(new Set());
+        }catch(error){setMessage(error.message);}
+      };
+      const reset=async()=>{
+        try{
+          const accepted=await rateForm.set('rates','{}');
+          setMessage(accepted?'已清空自定义单价':'保存失败，请重试');
+        }catch(error){setMessage(error.message);}
+      };
+      const field=(row,key,label,placeholder='0')=>h('label',{className:'dsc-rate-field'},
+        h('span',null,label),
+        h('input',{type:'text',inputMode:'decimal',autoComplete:'off',spellCheck:false,value:row[key],placeholder,
+          'aria-label':`${row.key||'新模型'} 的${label}`,
+          onChange:event=>change(row.id,key,event.target.value)}));
+      return h('div',{className:'dsc-rate-editor'},
+        h('p',{className:'dsc-rate-note'},'为第三方模型添加或覆盖单价；缓存写入留空时按输入价，缓存读取留空按 0。自定义单价不参与峰谷折扣；DeepSeek 模型使用内置峰谷价，不需要添加。'),
+        rows.length>0?h('div',{className:'dsc-rate-list'},rows.map(row=>{
+          const isOpen=open.has(row.id);
+          return h('div',{className:`dsc-rate-card${isOpen?' is-open':''}`,key:row.id},
+            h('div',{className:'dsc-rate-head'},
+              h('button',{type:'button',className:'dsc-rate-toggle','aria-expanded':isOpen,title:isOpen?'收起':'展开编辑',onClick:()=>toggle(row.id)},
+                h('span',{className:'dsc-rate-chevron','aria-hidden':'true'},'›'),
+                h('span',{className:'dsc-rate-name'},row.key||'新模型'),
+                h('span',{className:'dsc-rate-summary'},rateSummary(row))),
+              h('button',{type:'button',className:'dsc-rate-remove',title:'删除此模型','aria-label':`删除 ${row.key||'新模型'}`,onClick:()=>remove(row.id)},'×')),
+            isOpen?h('div',{className:'dsc-rate-body'},
+              h('label',{className:'dsc-rate-key'},
+                h('span',null,'模型 provider/model'),
+                h('input',{type:'text',value:row.key,list:'dsc-rate-models',placeholder:'qwen/qwen3.8-flash',spellCheck:false,autoComplete:'off',
+                  onChange:event=>change(row.id,'key',event.target.value)})),
+              h('div',{className:'dsc-rate-fields'},
+                field(row,'input','输入'),
+                field(row,'cacheRead','缓存读取'),
+                field(row,'cacheWrite','缓存写入','同输入价'),
+                field(row,'output','输出'))):null);
+        })):
+          h('p',{className:'dsc-rate-empty'},'还没有自定义模型。点击“添加模型”，填入 provider/model 和四项单价。'),
+        h('datalist',{id:'dsc-rate-models'},suggestions.map(key=>h('option',{key,value:key}))),
+        h('div',{className:'dsc-rate-actions'},
+          h('button',{type:'button',className:'dsc-btn',onClick:add},'添加模型'),
+          h('span',{className:'dsc-rate-spacer'}),
+          h('button',{type:'button',className:'dsc-btn dsc-btn--primary',onClick:()=>void save()},'保存单价'),
+          h('button',{type:'button',className:'dsc-btn',onClick:()=>void reset()},'清空自定义'),
+          h('span',{className:'dsc-rate-msg',role:'status'},message)));
+    }
+
     function Dashboard({ledger,sessionId,rateForm,readAccountBalance}) {
       const state=useLedger(ledger);
       const [period,setPeriod]=React.useState('today');
       const [month,setMonth]=React.useState(()=>dateKey(Date.now()).slice(0,7));
-      const [rateText,setRateText]=React.useState(null);
-      const [rateMessage,setRateMessage]=React.useState('');
       const [balanceState,refreshBalance]=useBalance(readAccountBalance);
 
       const today=dateKey(Date.now()), currentMonth=today.slice(0,7);
       const monthSummary=ledger.summary({month:currentMonth});
       const railFact=period==='month'?['\u5168\u90e8\u7d2f\u8ba1',ledger.summary({}).cost]:['\u672c\u6708\u7d2f\u8ba1',monthSummary.cost];
       const summary=ledger.summary(period==='today'?{day:today}:period==='month'?{month}:period==='session'?{sessionId}:{});
+      const rateSuggestions=[...new Set([...ledger.summary({}).models.map(model=>`${model.provider}/${model.model}`),...Object.keys(state.rates??{})])].sort();
       const balance=readBalance(balanceState);
       const loading=state.status==='loading';
       const unavailable=!state.updatedAt;
@@ -382,26 +489,16 @@ window.__ModuleLoader__.load({
         setTimeout(()=>URL.revokeObjectURL(url),1000);
       };
 
-      const saveRates=async text=>{
-        try{
-          const rates=parseRates(text);
-          const accepted=await rateForm.set('rates',JSON.stringify(rates));
-          setRateMessage(accepted?'\u5355\u4ef7\u5df2\u4fdd\u5b58':'\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u91cd\u8bd5');
-          if(accepted)setRateText(null);
-        }catch(error){setRateMessage(error.message);}
-      };
-
       const alerts=[];
       if(state.status==='error')alerts.push(['error',`\u66f4\u65b0\u5931\u8d25\uff1a${state.error??'\u8bf7\u68c0\u67e5\u8fde\u63a5\u540e\u91cd\u8bd5'}`]);
       if(state.failures.length>0)alerts.push(['warn',`${count(state.failures.length)} \u4e2a\u4f1a\u8bdd\u672a\u80fd\u8bfb\u53d6\uff0c\u7edf\u8ba1\u4ec5\u542b\u5176\u4f59\u4f1a\u8bdd`]);
       const pendingParts=[];
-      if(summary.unpriced>0)pendingParts.push(`${count(summary.unpriced)} \u6b21\u8c03\u7528\u7f3a\u5c11\u5355\u4ef7`);
-      if(summary.invalid>0)pendingParts.push(`${count(summary.invalid)} \u6b21\u7f3a\u5c11\u5b8c\u6574\u7528\u91cf`);
-      if(pendingParts.length>0)alerts.push(['muted',`${pendingParts.join('\uff0c')}\uff1b\u91d1\u989d\u4ec5\u542b\u53ef\u8ba1\u4ef7\u90e8\u5206`]);
+      if(summary.unpriced>0)pendingParts.push(`${count(summary.unpriced)} 次调用缺少单价`);
+      if(summary.invalid>0)pendingParts.push(`${count(summary.invalid)} 次尝试缺少完整用量`);
+      if(pendingParts.length>0)alerts.push(['muted',`${pendingParts.join('，')}；金额仅含可计价部分`]);
 
       const hasModels=summary.models.length>0||summary.web.requests>0;
       const hasUsage=summary.calls+summary.web.requests>0;
-      const ratesText=rateText??JSON.stringify(state.rates??{},null,2);
 
       return h('section',{className:'dsc','aria-label':'\u7528\u91cf\u8ba1\u8d39','aria-busy':loading},
         h('header',{className:'dsc-head'},
@@ -460,23 +557,25 @@ window.__ModuleLoader__.load({
             h('p',null,state.status==='error'?'\u6682\u65f6\u65e0\u6cd5\u8bfb\u53d6\u7528\u91cf':unavailable?'\u6b63\u5728\u8bfb\u53d6\u672c\u5730\u4f1a\u8bdd':'\u8fd9\u4e2a\u65f6\u6bb5\u8fd8\u6ca1\u6709\u7528\u91cf'),
             h('small',null,state.status==='error'?'\u8bf7\u68c0\u67e5\u8fde\u63a5\u540e\u5237\u65b0\u91cd\u8bd5\u3002':unavailable?'\u8bfb\u53d6\u5b8c\u6210\u540e\u4f1a\u81ea\u52a8\u663e\u793a\u7edf\u8ba1\u3002':'\u5b8c\u6210\u4e00\u6b21\u6a21\u578b\u8c03\u7528\u540e\u5237\u65b0\u5373\u53ef\u67e5\u770b\u3002')),
 
+        rateForm?h('section',{className:'dsc-pricing'},
+          h('div',{className:'dsc-section'},
+            h('div',null,
+              h('h2',null,'模型单价'),
+              h('p',null,'第三方模型按自定义单价计价；DeepSeek 使用内置峰谷价。')),
+            h('span',{className:'dsc-rate-unit'},'元 / 百万 tokens')),
+          h(RateEditor,{rates:state.rates??{},rateForm,suggestions:rateSuggestions}),
+          h('p',{className:'dsc-rate-hint'},'厂商余额：在输入框输入 /provider-balance 查询。DeepSeek / MIMO 走官方余额接口，GLM / MiniMax 为套餐额度；Qwen / 混元需要额外凭据。')):null,
+
         h('footer',{className:'dsc-foot'},
           h('div',{className:'dsc-foot-line'},
             h('span',null,`\u91d1\u989d\u4e3a\u4f30\u7b97 \u00b7 \u4ef7\u683c\u5feb\u7167 ${PRICE_VERSION}`),
             h('a',{href:PRICE_SOURCE,target:'_blank',rel:'noreferrer'},'\u5b98\u65b9\u4ef7\u683c\u8868 \u2197')),
           h('details',{className:'dsc-more'},
-            h('summary',null,'\u8ba1\u4ef7\u89c4\u5219\u4e0e\u81ea\u5b9a\u4e49\u5355\u4ef7'),
+            h('summary',null,'\u8ba1\u4ef7\u89c4\u5219'),
             h('div',{className:'dsc-prose'},
               h('p',null,'\u6bcf\u6b21\u8c03\u7528\u6309\u5b9e\u9645 token \u7528\u91cf \u00d7 \u5b98\u65b9\u5355\u4ef7\u8ba1\u4ef7\u3002\u5317\u4eac\u65f6\u95f4\u5468\u4e00\u81f3\u5468\u4e94 09:00\u201312:00\u300114:00\u201318:00 \u4e3a\u9ad8\u5cf0\uff0c\u5176\u4f59\u65f6\u6bb5\u3001\u5468\u672b\u4e0e\u6cd5\u5b9a\u8282\u5047\u65e5\u6309\u9ad8\u5cf0\u4ef7\u7684\u4e00\u534a\u8ba1\u4ef7\u3002\u5206\u53c9\u7ee7\u627f\u7684\u5386\u53f2\u4e0d\u91cd\u590d\u8ba1\u8d39\uff0c\u91cd\u8bd5\u5355\u72ec\u8ba1\u6b21\u3002'),
               h('p',null,'\u4ec5\u7edf\u8ba1\u4f1a\u8bdd\u65e5\u5fd7\u4e2d\u7684\u6a21\u578b token \u7528\u91cf\uff0c\u4ee5\u53ca\u6210\u529f\u7ed3\u7b97\u7684\u7f51\u9875\u641c\u7d22\u4e0e\u6293\u53d6\uff085 \u5143 / 1000 \u6b21\uff0c\u6bcf\u6b21 \u00a50.005\uff09\u3002\u91d1\u989d\u4e3a\u4f30\u7b97\uff0c\u4ee5\u5b98\u65b9\u8d26\u5355\u4e3a\u51c6\u3002')),
-            rateForm?h('div',{className:'dsc-rates'},
-              h('div',{className:'dsc-rates-head'},h('h3',null,'\u81ea\u5b9a\u4e49\u6a21\u578b\u5355\u4ef7'),h('span',null,'\u5143 / \u767e\u4e07 tokens')),
-              h('p',null,'\u4e3a\u672a\u8bc6\u522b\u7684\u6a21\u578b\u586b\u5199 provider/model \u56db\u9879\u5355\u4ef7\u3002\u81ea\u5b9a\u4e49\u5355\u4ef7\u4e0d\u4eab\u53d7\u5cf0\u8c37\u6298\u6263\uff0c\u4fdd\u5b58\u540e\u5bf9\u5168\u90e8\u5386\u53f2\u91cd\u65b0\u8ba1\u4ef7\u3002'),
-              h('textarea',{'aria-label':'\u6a21\u578b\u4ef7\u683c JSON',spellCheck:false,value:ratesText,placeholder:'{"provider/model":{"input":1,"cacheRead":0.1,"cacheWrite":1,"output":2}}',onChange:event=>setRateText(event.target.value)}),
-              h('div',{className:'dsc-rate-actions'},
-                h('button',{type:'button',className:'dsc-btn dsc-btn--primary',onClick:()=>void saveRates(ratesText)},'\u4fdd\u5b58\u5355\u4ef7'),
-                h('button',{type:'button',className:'dsc-btn',onClick:()=>void saveRates('{}')},'\u6062\u590d\u5185\u7f6e\u4ef7\u683c'),
-                h('span',{className:'dsc-rate-msg',role:'status'},rateMessage))):null)));
+)));
     }
     //#endregion
 
@@ -497,7 +596,12 @@ window.__ModuleLoader__.load({
       const pending=summary.unpriced+summary.invalid;
       const notes=[];
       if(state.status==='error')notes.push(ready?'\u66f4\u65b0\u5931\u8d25\uff0c\u663e\u793a\u4e0a\u6b21\u7ed3\u679c':'\u66f4\u65b0\u5931\u8d25\uff0c\u8bf7\u68c0\u67e5\u8fde\u63a5');
-      if(pending>0)notes.push(`${count(pending)} \u6b21\u8c03\u7528\u672a\u8ba1\u5165`);
+      if(pending>0){
+        const parts=[];
+        if(summary.unpriced>0)parts.push(`${count(summary.unpriced)} 次调用缺少单价`);
+        if(summary.invalid>0)parts.push(`${count(summary.invalid)} 次尝试缺少完整用量`);
+        notes.push(`${parts.join('，')}；金额仅含可计价部分`);
+      }
       // Cache writes only exist for providers/models that report them; a zero
       // row for everyone else is noise. Show it when this session produced some.
       const buckets=[

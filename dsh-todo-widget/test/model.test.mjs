@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
+  DEFAULT_SNOOZE_MINUTES,
   MAX_DAYS,
-  SNOOZE_MS,
   acknowledgeReminder,
   addItem,
   carryOver,
@@ -12,6 +13,8 @@ import {
   dayKeyOf,
   dayStats,
   emptyDoc,
+  exportJson,
+  exportMarkdown,
   itemsOf,
   normalizeDoc,
   normalizeTime,
@@ -29,6 +32,8 @@ import {
   unfinishedRecent,
   updateSettings,
 } from '../src/model.mjs';
+
+const zh = JSON.parse(await readFile(new URL('../locale/zh.json', import.meta.url), 'utf8'));
 
 /** Local wall-clock epoch, so the suite never depends on the machine zone. */
 function at(year, month, day, hours = 0, minutes = 0) {
@@ -207,12 +212,31 @@ test('acknowledging the visible reminder leaves the other kind pending', () => {
   assert.equal(computeReminder(sweepAcknowledged, NOON + 1000).due.length, 1);
 });
 
-test('snooze hides the reminder for the interval, then it returns', () => {
+test('snooze moves the reminder time itself and reports the same time on screen', () => {
   const doc = docWith({ [DAY]: [item({ id: 'a', dueAt: at(2026, 11, 9, 11, 0) })] });
   const reminder = computeReminder(doc, NOON);
   const snoozed = snoozeReminder(doc, reminder, NOON);
-  assert.equal(computeReminder(snoozed, NOON + SNOOZE_MS - 1000).due.length, 0);
-  assert.equal(computeReminder(snoozed, NOON + SNOOZE_MS + 1000).due.length, 1);
+  const moved = itemsOf(snoozed, DAY)[0];
+  assert.equal(moved.dueAt, NOON + DEFAULT_SNOOZE_MINUTES * 60_000);
+  assert.equal(moved.snoozeUntil, null);
+  assert.equal(computeReminder(snoozed, NOON + DEFAULT_SNOOZE_MINUTES * 60_000 - 1000).due.length, 0);
+  assert.equal(computeReminder(snoozed, NOON + DEFAULT_SNOOZE_MINUTES * 60_000 + 1000).due.length, 1);
+});
+
+test('snooze accepts a custom interval', () => {
+  const doc = docWith({ [DAY]: [item({ id: 'a', dueAt: at(2026, 11, 9, 11, 0) })] });
+  const reminder = computeReminder(doc, NOON);
+  const snoozed = snoozeReminder(doc, reminder, NOON, 25 * 60_000);
+  assert.equal(itemsOf(snoozed, DAY)[0].dueAt, NOON + 25 * 60_000);
+});
+
+test('the snooze duration is a bounded setting', () => {
+  assert.equal(normalizeDoc({ v: 1 }).settings.snoozeMinutes, DEFAULT_SNOOZE_MINUTES);
+  assert.equal(normalizeDoc({ v: 1, settings: { snoozeMinutes: 25 } }).settings.snoozeMinutes, 25);
+  assert.equal(normalizeDoc({ v: 1, settings: { snoozeMinutes: 0 } }).settings.snoozeMinutes, DEFAULT_SNOOZE_MINUTES);
+  assert.equal(normalizeDoc({ v: 1, settings: { snoozeMinutes: 5000 } }).settings.snoozeMinutes, DEFAULT_SNOOZE_MINUTES);
+  assert.equal(normalizeDoc({ v: 1, settings: { snoozeMinutes: 'x' } }).settings.snoozeMinutes, DEFAULT_SNOOZE_MINUTES);
+  assert.equal(updateSettings(emptyDoc(), { snoozeMinutes: 30 }).settings.snoozeMinutes, 30);
 });
 
 test('future reminders and future days never interrupt', () => {
@@ -309,4 +333,42 @@ test('pruneDoc caps stored days at MAX_DAYS and keeps the newest', () => {
   assert.equal(Object.keys(pruned.days).length, MAX_DAYS);
   assert.equal(pruned.days[shiftDayKey('2026-01-01', 19)], undefined);
   assert.ok(pruned.days[shiftDayKey('2026-01-01', 20)] !== undefined);
+});
+
+test('exportJson wraps a full document with format metadata', () => {
+  const doc = docWith({ [DAY]: [item({ id: 'a', text: '写周报' })] });
+  const parsed = JSON.parse(exportJson(doc, NOON));
+  assert.equal(parsed.format, 'dsh-todo-widget');
+  assert.equal(parsed.version, 1);
+  assert.equal(parsed.exportedAt, new Date(NOON).toISOString());
+  assert.equal(parsed.document.days[DAY][0].text, '写周报');
+  assert.equal(parsed.document.settings.wrapUpTime, '18:00');
+});
+
+test('exportMarkdown renders each day with checkboxes and real times', () => {
+  const doc = docWith({
+    [DAY]: [
+      item({ id: 'a', text: '写周报', dueAt: at(2026, 11, 9, 18, 0) }),
+      item({ id: 'b', text: '回复邮件', done: true, doneAt: at(2026, 11, 9, 10, 24) }),
+    ],
+    '2026-11-08': [item({ id: 'c', text: '整理笔记' })],
+  });
+  const t = key => zh.ui[key] ?? key;
+  const markdown = exportMarkdown(doc, NOON, t);
+  assert.ok(markdown.startsWith('# 每日待办'));
+  assert.ok(markdown.includes('## 11月8日 周日'));
+  assert.ok(markdown.includes('## 11月9日 周一'));
+  assert.ok(markdown.includes('- [ ] 写周报 (提醒时间 18:00)'));
+  assert.ok(markdown.includes('- [x] 回复邮件 (完成于 10:24)'));
+  assert.ok(markdown.includes('共 3 项，完成 1 项'));
+  // Oldest day first, so the file reads as a journal.
+  assert.ok(markdown.indexOf('## 11月8日') < markdown.indexOf('## 11月9日'));
+});
+
+test('exportMarkdown handles a document with no days', () => {
+  const t = key => zh.ui[key] ?? key;
+  const markdown = exportMarkdown(emptyDoc(), NOON, t);
+  assert.ok(markdown.startsWith('# 每日待办'));
+  assert.ok(markdown.includes('共 0 项，完成 0 项'));
+  assert.ok(!markdown.includes('## '));
 });

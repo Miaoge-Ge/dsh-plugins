@@ -22,7 +22,6 @@ window.__ModuleLoader__.load({
 
     const DOC_KEY = 'dsh.todo-widget.doc.v1';
     const TICK_MS = 15000;
-    const SNOOZE_MINUTES = 10;
 
     /* ── storage ───────────────────────────────────────────────────────── */
 
@@ -44,23 +43,26 @@ window.__ModuleLoader__.load({
       }
     }
 
-    /* ── formatting ────────────────────────────────────────────────────── */
-
-    function fill(text, values) {
-      return String(text ?? '').replace(/\{(\w+)\}/g, (match, key) => (key in values ? String(values[key]) : match));
-    }
-
-    function dayLabel(day, t, now) {
-      const date = parseDayKey(day);
-      if (!date) return day;
-      const sameYear = date.getFullYear() === new Date(now).getFullYear();
-      const pattern = t(sameYear ? 'dayFormat' : 'dayFormatYear');
-      return `${fill(pattern, { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() })} ${t(`weekday.${date.getDay()}`)}`;
-    }
-
-    function dayShort(epoch, t) {
-      const date = new Date(epoch);
-      return fill(t('dayFormat'), { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() });
+    /**
+     * Hand the text to the browser as a download. The anchor is transient and
+     * removed in the same task; nothing stays in the document.
+     */
+    function downloadText(filename, text, type) {
+      let url = null;
+      try {
+        url = window.URL.createObjectURL(new Blob([text], { type }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } catch (error) {
+        console.error('todo-widget: export failed', error);
+      } finally {
+        if (url !== null) window.setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+      }
     }
 
     /* ── icons ─────────────────────────────────────────────────────────── */
@@ -104,6 +106,10 @@ window.__ModuleLoader__.load({
     const IconBell = size => svg([
       h('path', { key: 'b', d: 'M18 8.5a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16s-2-1.5-2-6.5' }),
       h('path', { key: 'c', d: 'M10.3 19a2 2 0 0 0 3.4 0' }),
+    ], size);
+    const IconCalendar = size => svg([
+      h('rect', { key: 'r', x: 3.5, y: 5, width: 17, height: 15, rx: 2.6 }),
+      h('path', { key: 'h', d: 'M3.5 9.5h17M8 3.4v3.2M16 3.4v3.2' }),
     ], size);
 
     /* ── shared stores ─────────────────────────────────────────────────── */
@@ -210,6 +216,7 @@ window.__ModuleLoader__.load({
       const [draft, setDraft] = React.useState('');
       const [draftTime, setDraftTime] = React.useState('');
       const [editing, setEditing] = React.useState(null);
+      const [pickerOpen, setPickerOpen] = React.useState(false);
 
       React.useEffect(() => {
         const requested = focus.consume();
@@ -286,7 +293,8 @@ window.__ModuleLoader__.load({
               ? h('button', {
                 type: 'button', className: `tdw-chip${overdue ? ' is-overdue' : ''}`, title: t('changeDue'),
                 onClick: () => setEditing({ id: item.id, field: 'due' }),
-              }, IconClock(12), h('span', null, clockOf(item.dueAt)))
+              }, IconClock(12), h('span', null,
+                dayKeyOf(item.dueAt) === day ? clockOf(item.dueAt) : `${dayShort(item.dueAt, t)} ${clockOf(item.dueAt)}`))
               : h('button', {
                 type: 'button', className: 'tdw-chip is-quiet', title: t('setTime'),
                 onClick: () => setEditing({ id: item.id, field: 'due' }),
@@ -358,12 +366,40 @@ window.__ModuleLoader__.load({
           type: 'button', className: 'tdw-icon', title: t('prevDay'), 'aria-label': t('prevDay'),
           onClick: () => setPinnedDay(shiftDayKey(day, -1)),
         }, IconChevron('left', 15)),
-        h('span', { className: 'tdw-day' },
-          day === today ? `${t('today')} · ${dayLabel(day, t, now)}` : dayLabel(day, t, now)),
+        h('button', {
+          type: 'button', className: 'tdw-day', title: t('pickDate'),
+          'aria-label': `${dayLabel(day, t, now)} · ${t('pickDate')}`,
+          'aria-expanded': pickerOpen,
+          onClick: () => setPickerOpen(open => !open),
+        },
+          h('span', null, day === today ? `${t('today')} · ${dayLabel(day, t, now)}` : dayLabel(day, t, now)),
+          IconCalendar(13)),
         h('button', {
           type: 'button', className: 'tdw-icon', title: t('nextDay'), 'aria-label': t('nextDay'),
           onClick: () => setPinnedDay(shiftDayKey(day, 1)),
         }, IconChevron('right', 15)));
+
+      const datePicker = pickerOpen
+        ? h('div', { className: 'tdw-datepicker' },
+          h('input', {
+            type: 'date', className: 'tdw-dateinput', value: day, 'aria-label': t('pickDate'), autoFocus: true,
+            onChange: event => {
+              const value = event.target.value;
+              if (parseDayKey(value) !== null) setPinnedDay(value === today ? null : value);
+            },
+          }),
+          h('button', {
+            type: 'button', className: 'tdw-link',
+            onClick: () => {
+              setPinnedDay(null);
+              setPickerOpen(false);
+            },
+          }, t('backToday')),
+          h('button', {
+            type: 'button', className: 'tdw-link',
+            onClick: () => setPickerOpen(false),
+          }, t('pickerClose')))
+        : null;
 
       const carryBanner = carryCount > 0
         ? h('div', { className: 'tdw-carry' },
@@ -442,6 +478,27 @@ window.__ModuleLoader__.load({
             }))),
         h('div', { className: 'tdw-row' },
           h('div', { className: 'tdw-row-copy' },
+            h('strong', null, t('snoozeTitle')),
+            h('small', null, t('snoozeHint'))),
+          h('div', { className: 'tdw-row-controls' },
+            h('input', {
+              type: 'number', className: 'tdw-number', min: 1, max: 1440, step: 1,
+              defaultValue: String(settings.snoozeMinutes), 'aria-label': t('snoozeTitle'),
+              onBlur: event => {
+                const parsed = Math.round(Number(event.target.value));
+                const next = Number.isFinite(parsed) ? Math.min(1440, Math.max(1, parsed)) : settings.snoozeMinutes;
+                event.target.value = String(next);
+                if (next !== settings.snoozeMinutes) {
+                  store.update(current => updateSettings(current, { snoozeMinutes: next }));
+                }
+              },
+              onKeyDown: event => {
+                if (event.key === 'Enter') event.currentTarget.blur();
+              },
+            }),
+            h('span', { className: 'tdw-unit' }, t('minutesUnit')))),
+        h('div', { className: 'tdw-row' },
+          h('div', { className: 'tdw-row-copy' },
             h('strong', null, t('showDockTitle')),
             h('small', null, t('showDockHint'))),
           h('div', { className: 'tdw-row-controls' },
@@ -449,16 +506,38 @@ window.__ModuleLoader__.load({
               type: 'checkbox', className: 'tdw-box', checked: settings.showDock !== false,
               'aria-label': t('showDockTitle'),
               onChange: event => store.update(current => updateSettings(current, { showDock: event.target.checked })),
-            }))),
-        h('p', { className: 'tdw-hint' }, fill(t('snoozeHint'), { n: SNOOZE_MINUTES })),
+            }))));
+
+      const canExport = Object.keys(doc.days).length > 0;
+      const dataSection = h('section', { className: 'tdw-section', 'aria-labelledby': 'tdw-data-title' },
+        h('h2', { id: 'tdw-data-title', className: 'tdw-section-title' }, t('dataSection')),
+        h('div', { className: 'tdw-row' },
+          h('div', { className: 'tdw-row-copy' },
+            h('strong', null, t('exportTitle')),
+            h('small', null, t('exportHint'))),
+          h('div', { className: 'tdw-row-controls' },
+            h('button', {
+              type: 'button', className: 'tdw-btn tdw-btn-sm', disabled: !canExport,
+              onClick: () => {
+                const stamp = Date.now();
+                downloadText(`dsh-todos-${dayKeyOf(stamp)}.json`, exportJson(doc, stamp), 'application/json');
+              },
+            }, t('exportJson')),
+            h('button', {
+              type: 'button', className: 'tdw-btn tdw-btn-sm', disabled: !canExport,
+              onClick: () => {
+                const stamp = Date.now();
+                downloadText(`dsh-todos-${dayKeyOf(stamp)}.md`, exportMarkdown(doc, stamp, t), 'text/markdown');
+              },
+            }, t('exportMarkdown')))),
         h('p', { className: `tdw-hint${store.writable() ? '' : ' is-warning'}` },
           store.writable() ? t('storageHint') : t('storageWarning')));
 
       return h('section', { className: 'tdw-page', 'aria-label': t('title') },
         h('div', { className: 'tdw-page-inner' },
           head,
-          h('div', { className: 'tdw-board' }, daybar, carryBanner, addForm, draftRow, list, boardFoot),
-          settingsSection));
+          h('div', { className: 'tdw-board' }, daybar, datePicker, carryBanner, addForm, draftRow, list, boardFoot),
+          h('div', { className: 'tdw-panels' }, settingsSection, dataSection)));
     }
 
     /* ── composer entry ────────────────────────────────────────────────── */
@@ -490,12 +569,13 @@ window.__ModuleLoader__.load({
 
       const rows = kind === 'due' ? reminder.due.slice(0, 4) : unfinishedRecent(doc, reminder.today, 4);
       const more = kind === 'due' ? reminder.due.length - rows.length : 0;
+      const minutes = doc.settings.snoozeMinutes;
       // An evening due notice and the daily sweep describe the same unfinished
       // work, so acknowledging the notice also settles the sweep. An earlier
       // due notice must not consume a sweep that has not happened yet.
       const scope = kind === 'wrap' ? 'wrapUp' : reminder.wrapUp ? 'all' : 'due';
       const dismiss = () => store.update(current => acknowledgeReminder(current, reminder, Date.now(), scope));
-      const snooze = () => store.update(current => snoozeReminder(current, reminder, Date.now(), SNOOZE_MINUTES * 60000));
+      const snooze = () => store.update(current => snoozeReminder(current, reminder, Date.now(), minutes * 60000));
 
       return h('section', {
         className: 'tdw-toast', role: 'alertdialog', 'aria-label': t('reminderTitle'),
@@ -504,32 +584,38 @@ window.__ModuleLoader__.load({
         },
       },
         h('header', { className: 'tdw-toast-head' },
-          h('span', { className: 'tdw-toast-badge' }, IconBell(14)),
+          h('span', { className: `tdw-toast-badge${kind === 'due' ? ' is-due' : ''}` }, IconBell(15)),
           h('div', { className: 'tdw-toast-titles' },
             h('strong', null, kind === 'due' ? t('dueTitle') : t('wrapTitle')),
             h('span', null, kind === 'due'
               ? fill(t('dueNote'), { n: reminder.due.length })
               : fill(t('wrapNote'), { n: reminder.unfinished }))),
           h('button', {
-            type: 'button', className: 'tdw-icon', title: t('dismiss'), 'aria-label': t('dismiss'),
+            type: 'button', className: 'tdw-toast-close', title: t('dismiss'), 'aria-label': t('dismiss'),
             onClick: dismiss,
           }, IconClose(14))),
         h('ul', { className: 'tdw-toast-list' },
-          rows.map(({ day: rowDay, item }) => h('li', { key: `${rowDay}:${item.id}` },
-            h('button', {
-              type: 'button', className: 'tdw-toast-row',
-              onClick: () => openPanel(rowDay),
-            },
-              h('span', { className: 'tdw-toast-text' }, item.text),
-              h('span', { className: `tdw-toast-time${isOverdue(item, now) ? ' is-overdue' : ''}` },
-                rowDay === reminder.today
-                  ? (item.dueAt !== null ? clockOf(item.dueAt) : '')
-                  : dayLabel(rowDay, t, now))))),
+          rows.map(({ day: rowDay, item }) => {
+            const stamp = item.dueAt === null
+              ? (rowDay === reminder.today ? '' : dayShort(parseDayKey(rowDay).getTime(), t))
+              : dayKeyOf(item.dueAt) === reminder.today
+                ? clockOf(item.dueAt)
+                : `${dayShort(item.dueAt, t)} ${clockOf(item.dueAt)}`;
+            return h('li', { key: `${rowDay}:${item.id}` },
+              h('button', {
+                type: 'button', className: 'tdw-toast-row',
+                onClick: () => openPanel(rowDay),
+              },
+                h('span', { className: 'tdw-toast-text' }, item.text),
+                stamp === ''
+                  ? null
+                  : h('span', { className: `tdw-toast-time${isOverdue(item, now) ? ' is-overdue' : ''}` }, stamp)));
+          }),
           more > 0 ? h('li', { className: 'tdw-toast-more' }, fill(t('more'), { n: more })) : null),
         h('div', { className: 'tdw-toast-actions' },
-          h('button', { type: 'button', className: 'tdw-btn', onClick: dismiss }, t('dismiss')),
-          h('button', { type: 'button', className: 'tdw-btn is-primary', onClick: snooze },
-            fill(t('snooze'), { n: SNOOZE_MINUTES }))));
+          h('button', { type: 'button', className: 'tdw-toast-btn', onClick: dismiss }, t('dismiss')),
+          h('button', { type: 'button', className: 'tdw-toast-btn is-primary', onClick: snooze },
+            fill(t('snooze'), { n: minutes }))));
     }
 
     function TodoPanelIcon({ size }) {

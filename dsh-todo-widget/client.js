@@ -27,7 +27,7 @@ window.__ModuleLoader__.load({
 
 const VERSION = 1;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const SNOOZE_MS = 10 * 60 * 1000;
+const DEFAULT_SNOOZE_MINUTES = 10;
 const BACKLOG_DAYS = 3;
 const MAX_TEXT = 200;
 const MAX_DAYS = 400;
@@ -100,6 +100,26 @@ function isOverdue(item, now) {
   return item.done !== true && Number.isFinite(item.dueAt) && item.dueAt <= now;
 }
 
+/** Replace `{name}` placeholders, the same shape the locale service uses. */
+function fill(text, values) {
+  return String(text ?? '').replace(/\{(\w+)\}/g, (match, key) => (key in values ? String(values[key]) : match));
+}
+
+/** Localized date with its weekday, e.g. `11月9日 周日`. */
+function dayLabel(day, t, now) {
+  const date = parseDayKey(day);
+  if (!date) return day;
+  const sameYear = date.getFullYear() === new Date(now).getFullYear();
+  const pattern = t(sameYear ? 'dayFormat' : 'dayFormatYear');
+  return `${fill(pattern, { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() })} ${t(`weekday.${date.getDay()}`)}`;
+}
+
+/** Localized date without the weekday, e.g. `11月9日`. */
+function dayShort(epoch, t) {
+  const date = new Date(epoch);
+  return fill(t('dayFormat'), { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() });
+}
+
 function defaultSettings() {
   return {
     wrapUpEnabled: true,
@@ -107,6 +127,7 @@ function defaultSettings() {
     wrapUpShownOn: null,
     wrapUpSnoozeUntil: null,
     showDock: true,
+    snoozeMinutes: DEFAULT_SNOOZE_MINUTES,
   };
 }
 
@@ -144,6 +165,8 @@ function normalizeSettings(raw) {
     : null;
   settings.wrapUpSnoozeUntil = Number.isFinite(source.wrapUpSnoozeUntil) ? source.wrapUpSnoozeUntil : null;
   if (source.showDock === false) settings.showDock = false;
+  const snooze = Math.round(Number(source.snoozeMinutes));
+  if (Number.isFinite(snooze) && snooze >= 1 && snooze <= 1440) settings.snoozeMinutes = snooze;
   return settings;
 }
 
@@ -378,19 +401,74 @@ function acknowledgeReminder(doc, reminder, now, scope = 'all') {
   return next;
 }
 
-/** Snooze: the same popup returns after the interval. */
-function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
+/**
+ * Snooze: move the reminder itself forward, so the time the page shows is the
+ * time the notice will return. The due time was already in the past, so the
+ * new one is measured from now rather than from the missed moment.
+ */
+function snoozeReminder(doc, reminder, now, duration = DEFAULT_SNOOZE_MINUTES * 60 * 1000) {
   const until = now + duration;
   let next = doc;
   if (reminder.due.length > 0) {
     const days = { ...next.days };
     for (const { day, item } of reminder.due) {
-      days[day] = (days[day] ?? []).map(row => (row.id === item.id ? { ...row, snoozeUntil: until } : row));
+      days[day] = (days[day] ?? []).map(row => (row.id === item.id
+        ? { ...row, dueAt: until, snoozeUntil: null, remindedAt: null }
+        : row));
     }
     next = { ...next, days };
   }
   if (reminder.wrapUp) next = { ...next, settings: { ...next.settings, wrapUpSnoozeUntil: until } };
   return next;
+}
+
+/* ── export ────────────────────────────────────────────────────────────── */
+
+/**
+ * Complete JSON backup. The wrapper names the format so a future importer can
+ * recognize it without guessing at the document shape.
+ */
+function exportJson(doc, now) {
+  return JSON.stringify({
+    format: 'dsh-todo-widget',
+    version: VERSION,
+    exportedAt: new Date(now).toISOString(),
+    document: doc,
+  }, null, 2);
+}
+
+/**
+ * Readable Markdown journal of every stored day, oldest first. Keeps the
+ * order the items were added in, so the file reads like the day's notes.
+ */
+function exportMarkdown(doc, now, t) {
+  const days = Object.keys(doc.days).sort();
+  let total = 0;
+  let done = 0;
+  for (const day of days) {
+    for (const item of doc.days[day]) {
+      total += 1;
+      if (item.done) done += 1;
+    }
+  }
+  const lines = [
+    `# ${t('title')}`,
+    '',
+    `${t('exportedAt')}: ${new Date(now).toLocaleString()}`,
+    fill(t('exportSummary'), { total, done }),
+    '',
+  ];
+  for (const day of days) {
+    lines.push(`## ${dayLabel(day, t, now)}`);
+    for (const item of doc.days[day]) {
+      let line = `- [${item.done ? 'x' : ' '}] ${item.text}`;
+      if (item.done && item.doneAt !== null) line += ` (${fill(t('doneAt'), { time: clockOf(item.doneAt) })})`;
+      else if (!item.done && item.dueAt !== null) line += ` (${t('remindAt')} ${clockOf(item.dueAt)})`;
+      lines.push(line);
+    }
+    lines.push('');
+  }
+  return `${lines.join('\n').trimEnd()}\n`;
 }
     const DICTIONARIES = {
   "zh": {
@@ -423,15 +501,26 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
     "backToday": "回到今天",
     "prevDay": "前一天",
     "nextDay": "后一天",
+    "pickDate": "选择日期",
+    "pickerClose": "完成",
     "settings": "提醒设置",
     "wrapUpTitle": "每日收尾提醒",
     "wrapUpHint": "到点后若仍有未完成，会弹出提醒",
     "wrapUpTime": "提醒时间",
     "showDockTitle": "输入框下方快捷条",
     "showDockHint": "在输入框下方显示今日待办入口",
-    "snoozeHint": "逾期的待办每 {n} 分钟提醒一次",
+    "snoozeTitle": "稍后提醒",
+    "snoozeHint": "点「稍后」后推迟的分钟数，默认 10",
+    "minutesUnit": "分钟",
     "storageHint": "待办保存在本机，重启 Harness 后仍在",
     "storageWarning": "无法写入本机存储，改动可能不会保留",
+    "dataSection": "数据",
+    "exportTitle": "导出待办",
+    "exportHint": "导出全部日期，JSON 可留作备份",
+    "exportJson": "导出 JSON",
+    "exportMarkdown": "导出 Markdown",
+    "exportedAt": "导出时间",
+    "exportSummary": "共 {total} 项，完成 {done} 项",
     "dockLabel": "今日待办",
     "openPanel": "打开每日待办",
     "dismiss": "知道了",
@@ -482,15 +571,26 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
     "backToday": "Today",
     "prevDay": "Previous day",
     "nextDay": "Next day",
+    "pickDate": "Pick a date",
+    "pickerClose": "Done",
     "settings": "Reminder settings",
     "wrapUpTitle": "Daily wrap-up",
     "wrapUpHint": "Pop up if anything is still unfinished at this time",
     "wrapUpTime": "Reminder time",
     "showDockTitle": "Composer shortcut",
     "showDockHint": "Show today's to-dos under the composer",
-    "snoozeHint": "Overdue to-dos remind again after {n} minutes",
+    "snoozeTitle": "Snooze",
+    "snoozeHint": "Minutes to postpone after Snooze; 10 by default",
+    "minutesUnit": "min",
     "storageHint": "To-dos are stored on this device and survive a restart",
     "storageWarning": "Local storage is unavailable; changes may not be kept",
+    "dataSection": "Data",
+    "exportTitle": "Export to-dos",
+    "exportHint": "Export every day; JSON keeps a backup",
+    "exportJson": "Export JSON",
+    "exportMarkdown": "Export Markdown",
+    "exportedAt": "Exported at",
+    "exportSummary": "{total} items, {done} done",
     "dockLabel": "Today's to-dos",
     "openPanel": "Open daily to-dos",
     "dismiss": "Got it",
@@ -512,11 +612,10 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
     "weekday.6": "Sat"
   }
 };
-    const CSS = "/* Daily to-do surfaces. Every color comes from the live harness theme, so the\n   page, the composer entry and the reminder follow the built-in light/dark\n   palettes and third-party token layers. The page is a column of the app, not\n   a card over it: no background of its own, hairline rules, settings-style\n   rows. */\n\n.tdw-page,\n.tdw-dock,\n.tdw-toast{\n  --tdw-line:var(--dsw-alias-border-l1);\n  --tdw-line-2:var(--dsw-alias-border-l2);\n  --tdw-ink:var(--dsw-alias-label-primary);\n  --tdw-soft:var(--dsw-alias-label-secondary);\n  --tdw-mute:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));\n  --tdw-accent:var(--dsw-alias-brand-primary);\n  --tdw-warn:var(--dsw-alias-state-warn-primary);\n  --tdw-danger:var(--dsw-alias-state-error-primary);\n  --tdw-hover:var(--dsw-alias-interactive-bg-hover,var(--dsw-alias-bg-layer-2));\n  --tdw-raised:var(--dsw-alias-bg-layer-2);\n  font-variant-numeric:tabular-nums;\n}\n\n/* ── page ────────────────────────────────────────────────────────────── */\n\n.tdw-page{\n  flex:1;\n  min-height:0;\n  overflow:auto;\n  color:var(--tdw-ink);\n  font:13.5px/1.6 var(--dsh-font-family,\"Segoe UI\",\"Microsoft YaHei\",system-ui,sans-serif);\n}\n.tdw-page *{box-sizing:border-box}\n.tdw-page-inner{width:100%;max-width:840px;margin:0 auto;padding:calc(var(--dsh-frame-top-clearance,0px) + 22px) 32px 36px}\n@media (max-width:720px){\n  .tdw-page-inner{padding:calc(var(--dsh-frame-top-clearance,0px) + 16px) 18px 28px}\n}\n\n.tdw-page button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}\n.tdw-page button:disabled{cursor:default}\n.tdw-page :focus-visible,.tdw-toast :focus-visible{outline:2px solid var(--tdw-accent);outline-offset:2px}\n.tdw-page svg,.tdw-toast svg{display:block;flex:none}\n.tdw-page input{font:inherit;color:inherit}\n.tdw-page p{margin:0}\n\n.tdw-page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:14px}\n.tdw-page-copy h1{margin:0;font-size:18px;font-weight:600;letter-spacing:-.2px;line-height:1.35}\n.tdw-sub{margin-top:3px;font-size:12px;color:var(--tdw-mute)}\n.tdw-overdue{color:var(--tdw-danger)}\n\n.tdw-board{border-top:1px solid var(--tdw-line)}\n.tdw-daybar{display:flex;align-items:center;gap:2px;padding:7px 0;border-bottom:1px solid var(--tdw-line)}\n.tdw-day{margin:0 6px;font-size:12.5px;font-weight:500;color:var(--tdw-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n\n.tdw-icon{\n  display:grid;\n  place-items:center;\n  width:28px;\n  height:28px;\n  border-radius:7px;\n  color:var(--tdw-mute);\n  flex:none;\n  transition:background .12s,color .12s;\n}\n.tdw-icon:hover{background:var(--tdw-hover);color:var(--tdw-ink)}\n.tdw-icon.is-on{color:var(--tdw-accent);background:color-mix(in srgb,var(--tdw-accent) 12%,transparent)}\n.tdw-icon.is-danger:hover{color:var(--tdw-danger)}\n\n.tdw-btn{\n  height:30px;\n  padding:0 12px;\n  border-radius:8px;\n  border:1px solid var(--tdw-line-2);\n  background:transparent;\n  color:var(--tdw-soft);\n  font-size:12.5px;\n  flex:none;\n  transition:background .12s,color .12s,border-color .12s;\n}\n.tdw-btn:hover{background:var(--tdw-hover);color:var(--tdw-ink)}\n.tdw-btn.is-primary{\n  color:var(--tdw-accent);\n  border-color:color-mix(in srgb,var(--tdw-accent) 32%,transparent);\n  background:color-mix(in srgb,var(--tdw-accent) 12%,transparent);\n}\n.tdw-btn.is-primary:hover{background:color-mix(in srgb,var(--tdw-accent) 20%,transparent)}\n\n.tdw-add{display:flex;align-items:center;gap:6px;padding:12px 0;border-bottom:1px solid var(--tdw-line)}\n.tdw-input{\n  flex:1;\n  min-width:0;\n  height:32px;\n  padding:0 10px;\n  border-radius:8px;\n  border:1px solid transparent;\n  background:var(--tdw-raised);\n  color:var(--tdw-ink);\n  font-size:13px;\n  outline:none;\n  transition:border-color .12s,background .12s;\n}\n.tdw-input::placeholder{color:var(--tdw-mute)}\n.tdw-input:focus{border-color:var(--tdw-accent);background:transparent}\n.tdw-add-btn{\n  height:32px;\n  padding:0 14px;\n  border-radius:8px;\n  background:color-mix(in srgb,var(--tdw-accent) 14%,transparent);\n  color:var(--tdw-accent);\n  font-size:12.5px;\n  font-weight:500;\n  flex:none;\n  transition:background .12s;\n}\n.tdw-add-btn:hover:not(:disabled){background:color-mix(in srgb,var(--tdw-accent) 22%,transparent)}\n.tdw-add-btn:disabled{opacity:.45;cursor:default}\n.tdw-add-time{display:flex;align-items:center;gap:8px;padding:8px 0 0;font-size:11.5px;color:var(--tdw-soft)}\n\n.tdw-carry{\n  display:flex;\n  align-items:center;\n  gap:12px;\n  margin-top:10px;\n  padding:7px 10px;\n  border-radius:8px;\n  background:var(--tdw-raised);\n  font-size:11.5px;\n  color:var(--tdw-soft);\n}\n.tdw-carry-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.tdw-carry-actions{display:flex;align-items:center;gap:2px;flex:none}\n.tdw-carry-btn{\n  height:24px;\n  padding:0 9px;\n  border-radius:6px;\n  font-size:11.5px;\n  color:var(--tdw-accent);\n  background:color-mix(in srgb,var(--tdw-accent) 12%,transparent);\n  transition:background .12s;\n}\n.tdw-carry-btn:hover{background:color-mix(in srgb,var(--tdw-accent) 20%,transparent)}\n\n.tdw-list{list-style:none;margin:0;padding:0}\n.tdw-item{\n  display:flex;\n  align-items:flex-start;\n  gap:10px;\n  padding:10px 8px;\n  border-bottom:1px solid var(--tdw-line);\n  border-radius:8px;\n  transition:background .12s;\n}\n.tdw-item:hover{background:var(--tdw-hover)}\n.tdw-check{\n  display:grid;\n  place-items:center;\n  width:18px;\n  height:18px;\n  margin-top:2px;\n  border-radius:6px;\n  border:1.5px solid var(--tdw-line-2);\n  color:transparent;\n  flex:none;\n  transition:background .12s,border-color .12s,color .12s;\n}\n.tdw-check:hover{border-color:var(--tdw-accent)}\n.tdw-item.is-done .tdw-check{\n  border-color:var(--tdw-accent);\n  color:var(--tdw-accent);\n  background:color-mix(in srgb,var(--tdw-accent) 12%,transparent);\n}\n.tdw-item-main{flex:1;min-width:0}\n.tdw-text{display:block;font-size:13px;line-height:1.5;overflow-wrap:anywhere;user-select:text}\n.tdw-item.is-done .tdw-text{\n  color:var(--tdw-mute);\n  text-decoration:line-through;\n  text-decoration-thickness:1px;\n  text-decoration-color:color-mix(in srgb,var(--tdw-mute) 60%,transparent);\n}\n.tdw-meta{margin-top:1px;font-size:11px;color:var(--tdw-mute)}\n.tdw-meta-link{font-size:11px;color:var(--tdw-mute);border-radius:4px;text-align:left}\n.tdw-meta-link:hover{color:var(--tdw-soft);text-decoration:underline}\n.tdw-item-side{display:flex;align-items:center;gap:4px;flex:none}\n.tdw-chip{\n  display:inline-flex;\n  align-items:center;\n  gap:3px;\n  height:20px;\n  padding:0 7px;\n  border-radius:999px;\n  background:var(--tdw-raised);\n  font-size:11px;\n  color:var(--tdw-soft);\n  transition:color .12s,background .12s;\n}\n.tdw-chip:hover{color:var(--tdw-ink)}\n.tdw-chip.is-quiet{background:transparent;color:var(--tdw-mute);opacity:0}\n.tdw-item:hover .tdw-chip.is-quiet,.tdw-item:focus-within .tdw-chip.is-quiet{opacity:1}\n.tdw-chip.is-overdue{\n  color:var(--tdw-danger);\n  background:color-mix(in srgb,var(--tdw-danger) 12%,transparent);\n}\n.tdw-time{\n  height:24px;\n  padding:0 4px;\n  border-radius:6px;\n  border:1px solid var(--tdw-line-2);\n  background:transparent;\n  color:var(--tdw-ink);\n  font-size:11.5px;\n  color-scheme:light dark;\n}\n.tdw-edit{\n  width:100%;\n  height:26px;\n  padding:0 6px;\n  border-radius:6px;\n  border:1px solid var(--tdw-accent);\n  background:transparent;\n  color:var(--tdw-ink);\n  font-size:13px;\n  outline:none;\n}\n.tdw-row-actions{display:flex;align-items:center;flex:none;opacity:0;transition:opacity .12s}\n.tdw-item:hover .tdw-row-actions,.tdw-item:focus-within .tdw-row-actions{opacity:1}\n.tdw-row-actions .tdw-icon{width:24px;height:24px}\n@media (hover:none){\n  .tdw-row-actions{opacity:1}\n  .tdw-chip.is-quiet{opacity:1}\n}\n\n.tdw-board-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:9px 2px 0;font-size:11.5px;color:var(--tdw-mute)}\n.tdw-link{font-size:11.5px;color:var(--tdw-soft);padding:2px 6px;border-radius:5px;white-space:nowrap}\n.tdw-link:hover{background:var(--tdw-hover);color:var(--tdw-ink)}\n\n.tdw-empty{\n  display:flex;\n  flex-direction:column;\n  align-items:center;\n  gap:6px;\n  padding:54px 20px 58px;\n  border-bottom:1px solid var(--tdw-line);\n  text-align:center;\n  color:var(--tdw-soft);\n}\n.tdw-empty-mark{\n  display:grid;\n  place-items:center;\n  width:40px;\n  height:40px;\n  margin-bottom:2px;\n  border-radius:14px;\n  background:var(--tdw-raised);\n  color:var(--tdw-mute);\n}\n.tdw-empty p{font-size:13px}\n.tdw-empty .tdw-empty-hint{font-size:11.5px;color:var(--tdw-mute)}\n\n.tdw-section{margin-top:30px}\n.tdw-section-title{margin:0;padding-bottom:4px;font-size:12.5px;font-weight:600;color:var(--tdw-soft)}\n.tdw-row{display:flex;align-items:center;gap:20px;padding:12px 0;border-top:1px solid var(--tdw-line)}\n.tdw-row-copy{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}\n.tdw-row-copy strong{font-size:13px;font-weight:500;color:var(--tdw-ink)}\n.tdw-row-copy small{font-size:11.5px;color:var(--tdw-mute);line-height:1.45}\n.tdw-row-controls{display:flex;align-items:center;gap:10px;flex:none}\n.tdw-box{width:15px;height:15px;accent-color:var(--tdw-accent);cursor:pointer}\n.tdw-hint{margin:8px 0 0;font-size:11px;color:var(--tdw-mute);line-height:1.5}\n.tdw-hint.is-warning{color:var(--tdw-danger)}\n\n/* ── composer entry ──────────────────────────────────────────────────── */\n\n.tdw-dock{\n  display:inline-flex;\n  align-items:center;\n  gap:5px;\n  max-width:100%;\n  padding:1px 7px;\n  border:0;\n  border-radius:var(--dsw-radius-sm,6px);\n  background:transparent;\n  color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));\n  font:inherit;\n  font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);\n  line-height:20px;\n  white-space:nowrap;\n  cursor:pointer;\n  transition:background .12s,color .12s;\n}\n.tdw-dock:hover{background:var(--dsw-alias-interactive-bg-hover,var(--dsw-alias-bg-layer-2));color:var(--dsw-alias-label-secondary)}\n.tdw-dock:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}\n.tdw-dock b{font-weight:500;color:var(--dsw-alias-label-secondary)}\n.tdw-dock em{font-style:normal;color:var(--dsw-alias-state-error-primary)}\n.tdw-dock-mark{display:flex;flex:none}\n\n/* ── reminder notice ─────────────────────────────────────────────────── */\n\n.tdw-toast{\n  position:fixed;\n  top:calc(var(--dsh-frame-top-clearance,0px) + 14px);\n  right:16px;\n  z-index:60;\n  width:min(340px,calc(100vw - 32px));\n  overflow:hidden;\n  pointer-events:auto;\n  color:var(--tdw-ink);\n  font:13px/1.5 var(--dsh-font-family,\"Segoe UI\",\"Microsoft YaHei\",system-ui,sans-serif);\n  background:var(--dsw-alias-bg-overlay,var(--dsw-alias-bg-layer-1));\n  border:1px solid var(--tdw-line-2);\n  border-radius:12px;\n  box-shadow:0 16px 38px -22px color-mix(in srgb,var(--tdw-ink) 45%,transparent);\n  animation:tdw-in .16s ease-out;\n}\n@keyframes tdw-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}\n.tdw-toast *{box-sizing:border-box}\n.tdw-toast button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}\n.tdw-toast-head{display:flex;align-items:flex-start;gap:8px;padding:10px 6px 8px 12px}\n.tdw-toast-badge{\n  display:grid;\n  place-items:center;\n  width:22px;\n  height:22px;\n  margin-top:1px;\n  border-radius:7px;\n  background:color-mix(in srgb,var(--tdw-warn) 16%,transparent);\n  color:var(--tdw-warn);\n  flex:none;\n}\n.tdw-toast-titles{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}\n.tdw-toast-titles strong{font-size:12px;font-weight:600}\n.tdw-toast-titles span{font-size:11px;color:var(--tdw-mute)}\n.tdw-toast-list{list-style:none;margin:0;padding:0 8px 4px;display:flex;flex-direction:column;gap:1px}\n.tdw-toast-row{display:flex;align-items:center;gap:8px;width:100%;padding:5px 6px;border-radius:6px;text-align:left}\n.tdw-toast-row:hover{background:var(--tdw-hover)}\n.tdw-toast-text{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.tdw-toast-time{font-size:10.5px;color:var(--tdw-mute);flex:none}\n.tdw-toast-time.is-overdue{color:var(--tdw-danger)}\n.tdw-toast-more{padding:2px 6px 4px;font-size:10.5px;color:var(--tdw-mute)}\n.tdw-toast-actions{display:flex;justify-content:flex-end;gap:6px;padding:6px 8px 9px}\n\n@media (prefers-reduced-motion:reduce){\n  .tdw-toast{animation:none}\n}\n";
+    const CSS = "/* Daily to-do surfaces. Every color comes from the live harness theme, so the\n   page, the composer entry and the reminder follow the built-in light/dark\n   palettes and third-party token layers. The page is a column of the app, not\n   a card over it: no background of its own, hairline rules, settings-style\n   rows. */\n\n.tdw-page,\n.tdw-dock,\n.tdw-toast{\n  --tdw-line:var(--dsw-alias-border-l1);\n  --tdw-line-2:var(--dsw-alias-border-l2);\n  --tdw-ink:var(--dsw-alias-label-primary);\n  --tdw-soft:var(--dsw-alias-label-secondary);\n  --tdw-mute:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));\n  --tdw-accent:var(--dsw-alias-brand-primary);\n  --tdw-warn:var(--dsw-alias-state-warn-primary);\n  --tdw-danger:var(--dsw-alias-state-error-primary);\n  --tdw-hover:var(--dsw-alias-interactive-bg-hover,var(--dsw-alias-bg-layer-2));\n  --tdw-raised:var(--dsw-alias-bg-layer-2);\n  font-variant-numeric:tabular-nums;\n}\n\n/* ── page ────────────────────────────────────────────────────────────── */\n\n.tdw-page{\n  box-sizing:border-box;\n  flex:1;\n  min-height:0;\n  display:flex;\n  flex-direction:column;\n  overflow:hidden;\n  color:var(--tdw-ink);\n  font:13.5px/1.6 var(--dsh-font-family,\"Segoe UI\",\"Microsoft YaHei\",system-ui,sans-serif);\n}\n.tdw-page *{box-sizing:border-box}\n.tdw-page-inner{\n  flex:1;\n  min-height:0;\n  display:flex;\n  flex-direction:column;\n  width:100%;\n  max-width:840px;\n  margin:0 auto;\n  padding:18px 32px;\n}\n@media (max-width:720px){\n  .tdw-page-inner{padding:14px 18px}\n}\n/* The window-chrome strip overlays the content only on macOS; elsewhere the\n   caption row already sits above the columns. */\n[data-platform=\"darwin\"] .tdw-page-inner{\n  padding-top:calc(18px + var(--dsh-frame-top-clearance,0px));\n}\n\n.tdw-page button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}\n.tdw-page button:disabled{cursor:default;opacity:.45}\n.tdw-page :focus-visible,.tdw-toast :focus-visible{outline:2px solid var(--tdw-accent);outline-offset:2px}\n.tdw-page svg,.tdw-toast svg{display:block;flex:none}\n.tdw-page input{font:inherit;color:inherit}\n.tdw-page p{margin:0}\n\n.tdw-page-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:10px;flex:none}\n.tdw-page-copy{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0}\n.tdw-page-copy h1{margin:0;font-size:17px;font-weight:600;letter-spacing:-.2px;line-height:1.35;white-space:nowrap}\n.tdw-sub{font-size:12px;color:var(--tdw-mute)}\n.tdw-overdue{color:var(--tdw-danger)}\n\n.tdw-board{\n  flex:1;\n  min-height:0;\n  display:flex;\n  flex-direction:column;\n  border-top:1px solid var(--tdw-line);\n}\n.tdw-daybar{display:flex;align-items:center;gap:2px;padding:6px 0;border-bottom:1px solid var(--tdw-line);flex:none}\n.tdw-day{\n  flex:1;\n  display:inline-flex;\n  align-items:center;\n  justify-content:center;\n  gap:6px;\n  min-width:0;\n  margin:0 4px;\n  padding:3px 8px;\n  border-radius:6px;\n  font-size:12.5px;\n  font-weight:500;\n  color:var(--tdw-soft);\n  white-space:nowrap;\n  overflow:hidden;\n  transition:background .12s,color .12s;\n}\n.tdw-day span{overflow:hidden;text-overflow:ellipsis}\n.tdw-day svg{flex:none;opacity:.7}\n.tdw-day:hover{background:var(--tdw-hover);color:var(--tdw-ink)}\n.tdw-datepicker{display:flex;align-items:center;gap:8px;padding:8px 0 0;flex:none}\n.tdw-dateinput{\n  height:28px;\n  padding:0 8px;\n  border-radius:6px;\n  border:1px solid var(--tdw-line-2);\n  background:transparent;\n  color:var(--tdw-ink);\n  font-size:12.5px;\n  color-scheme:light dark;\n}\n\n.tdw-icon{\n  display:grid;\n  place-items:center;\n  width:28px;\n  height:28px;\n  border-radius:7px;\n  color:var(--tdw-mute);\n  flex:none;\n  transition:background .12s,color .12s;\n}\n.tdw-icon:hover{background:var(--tdw-hover);color:var(--tdw-ink)}\n.tdw-icon.is-on{color:var(--tdw-accent);background:color-mix(in srgb,var(--tdw-accent) 12%,transparent)}\n.tdw-icon.is-danger:hover{color:var(--tdw-danger)}\n\n.tdw-btn{\n  height:30px;\n  padding:0 12px;\n  border-radius:8px;\n  border:1px solid var(--tdw-line-2);\n  background:transparent;\n  color:var(--tdw-soft);\n  font-size:12.5px;\n  flex:none;\n  transition:background .12s,color .12s,border-color .12s;\n}\n.tdw-btn:hover{background:var(--tdw-hover);color:var(--tdw-ink)}\n.tdw-btn.tdw-btn-sm{height:26px;padding:0 10px;font-size:11.5px}\n.tdw-btn:disabled{opacity:.45;cursor:default;background:transparent}\n.tdw-btn.is-primary{\n  color:var(--tdw-accent);\n  border-color:color-mix(in srgb,var(--tdw-accent) 32%,transparent);\n  background:color-mix(in srgb,var(--tdw-accent) 12%,transparent);\n}\n.tdw-btn.is-primary:hover{background:color-mix(in srgb,var(--tdw-accent) 20%,transparent)}\n\n.tdw-add{display:flex;align-items:center;gap:6px;padding:10px 0;border-bottom:1px solid var(--tdw-line);flex:none}\n.tdw-input{\n  flex:1;\n  min-width:0;\n  height:32px;\n  padding:0 10px;\n  border-radius:8px;\n  border:1px solid transparent;\n  background:var(--tdw-raised);\n  color:var(--tdw-ink);\n  font-size:13px;\n  outline:none;\n  transition:border-color .12s,background .12s;\n}\n.tdw-input::placeholder{color:var(--tdw-mute)}\n.tdw-input:focus{border-color:var(--tdw-accent);background:transparent}\n.tdw-add-btn{\n  height:32px;\n  padding:0 14px;\n  border-radius:8px;\n  background:color-mix(in srgb,var(--tdw-accent) 14%,transparent);\n  color:var(--tdw-accent);\n  font-size:12.5px;\n  font-weight:500;\n  flex:none;\n  transition:background .12s;\n}\n.tdw-add-btn:hover:not(:disabled){background:color-mix(in srgb,var(--tdw-accent) 22%,transparent)}\n.tdw-add-btn:disabled{opacity:.45;cursor:default}\n.tdw-add-time{display:flex;align-items:center;gap:8px;padding:8px 0 0;font-size:11.5px;color:var(--tdw-soft);flex:none}\n\n.tdw-carry{\n  display:flex;\n  align-items:center;\n  gap:12px;\n  margin-top:8px;\n  padding:6px 10px;\n  border-radius:8px;\n  background:var(--tdw-raised);\n  font-size:11.5px;\n  color:var(--tdw-soft);\n  flex:none;\n}\n.tdw-carry-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}\n.tdw-carry-actions{display:flex;align-items:center;gap:2px;flex:none}\n.tdw-carry-btn{\n  height:24px;\n  padding:0 9px;\n  border-radius:6px;\n  font-size:11.5px;\n  color:var(--tdw-accent);\n  background:color-mix(in srgb,var(--tdw-accent) 12%,transparent);\n  transition:background .12s;\n}\n.tdw-carry-btn:hover{background:color-mix(in srgb,var(--tdw-accent) 20%,transparent)}\n\n.tdw-list{list-style:none;margin:0;padding:0;flex:1;min-height:0;overflow:auto;scrollbar-width:thin}\n.tdw-item{\n  display:flex;\n  align-items:flex-start;\n  gap:10px;\n  padding:8px 8px;\n  border-bottom:1px solid var(--tdw-line);\n  border-radius:8px;\n  transition:background .12s;\n}\n.tdw-item:hover{background:var(--tdw-hover)}\n.tdw-check{\n  display:grid;\n  place-items:center;\n  width:18px;\n  height:18px;\n  margin-top:2px;\n  border-radius:6px;\n  border:1.5px solid var(--tdw-line-2);\n  color:transparent;\n  flex:none;\n  transition:background .12s,border-color .12s,color .12s;\n}\n.tdw-check:hover{border-color:var(--tdw-accent)}\n.tdw-item.is-done .tdw-check{\n  border-color:var(--tdw-accent);\n  color:var(--tdw-accent);\n  background:color-mix(in srgb,var(--tdw-accent) 12%,transparent);\n}\n.tdw-item-main{flex:1;min-width:0}\n.tdw-text{display:block;font-size:13px;line-height:1.5;overflow-wrap:anywhere;user-select:text}\n.tdw-item.is-done .tdw-text{\n  color:var(--tdw-mute);\n  text-decoration:line-through;\n  text-decoration-thickness:1px;\n  text-decoration-color:color-mix(in srgb,var(--tdw-mute) 60%,transparent);\n}\n.tdw-meta{margin-top:1px;font-size:11px;color:var(--tdw-mute)}\n.tdw-meta-link{font-size:11px;color:var(--tdw-mute);border-radius:4px;text-align:left}\n.tdw-meta-link:hover{color:var(--tdw-soft);text-decoration:underline}\n.tdw-item-side{display:flex;align-items:center;gap:4px;flex:none}\n.tdw-chip{\n  display:inline-flex;\n  align-items:center;\n  gap:3px;\n  height:20px;\n  padding:0 7px;\n  border-radius:999px;\n  background:var(--tdw-raised);\n  font-size:11px;\n  color:var(--tdw-soft);\n  transition:color .12s,background .12s;\n}\n.tdw-chip:hover{color:var(--tdw-ink)}\n.tdw-chip.is-quiet{background:transparent;color:var(--tdw-mute);opacity:0}\n.tdw-item:hover .tdw-chip.is-quiet,.tdw-item:focus-within .tdw-chip.is-quiet{opacity:1}\n.tdw-chip.is-overdue{\n  color:var(--tdw-danger);\n  background:color-mix(in srgb,var(--tdw-danger) 12%,transparent);\n}\n.tdw-time{\n  height:24px;\n  padding:0 4px;\n  border-radius:6px;\n  border:1px solid var(--tdw-line-2);\n  background:transparent;\n  color:var(--tdw-ink);\n  font-size:11.5px;\n  color-scheme:light dark;\n}\n.tdw-edit{\n  width:100%;\n  height:26px;\n  padding:0 6px;\n  border-radius:6px;\n  border:1px solid var(--tdw-accent);\n  background:transparent;\n  color:var(--tdw-ink);\n  font-size:13px;\n  outline:none;\n}\n.tdw-row-actions{display:flex;align-items:center;flex:none;opacity:0;transition:opacity .12s}\n.tdw-item:hover .tdw-row-actions,.tdw-item:focus-within .tdw-row-actions{opacity:1}\n.tdw-row-actions .tdw-icon{width:24px;height:24px}\n@media (hover:none){\n  .tdw-row-actions{opacity:1}\n  .tdw-chip.is-quiet{opacity:1}\n}\n\n.tdw-board-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:7px 2px 0;font-size:11.5px;color:var(--tdw-mute);flex:none}\n.tdw-link{font-size:11.5px;color:var(--tdw-soft);padding:2px 6px;border-radius:5px;white-space:nowrap}\n.tdw-link:hover{background:var(--tdw-hover);color:var(--tdw-ink)}\n\n.tdw-empty{\n  flex:1;\n  min-height:0;\n  display:flex;\n  flex-direction:column;\n  align-items:center;\n  justify-content:center;\n  gap:6px;\n  text-align:center;\n  color:var(--tdw-soft);\n}\n.tdw-empty-mark{\n  display:grid;\n  place-items:center;\n  width:40px;\n  height:40px;\n  margin-bottom:2px;\n  border-radius:14px;\n  background:var(--tdw-raised);\n  color:var(--tdw-mute);\n}\n.tdw-empty p{font-size:13px}\n.tdw-empty .tdw-empty-hint{font-size:11.5px;color:var(--tdw-mute)}\n\n.tdw-panels{\n  flex:none;\n  display:grid;\n  grid-template-columns:1fr 1fr;\n  gap:0 40px;\n  margin-top:16px;\n}\n@media (max-width:760px){\n  .tdw-panels{grid-template-columns:1fr;gap:0}\n}\n.tdw-section-title{margin:0;padding-bottom:3px;font-size:12px;font-weight:600;color:var(--tdw-soft)}\n.tdw-section{min-width:0}\n.tdw-row{display:flex;align-items:center;gap:20px;padding:8px 0;border-top:1px solid var(--tdw-line)}\n.tdw-row-copy{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}\n.tdw-row-copy strong{font-size:12.5px;font-weight:500;color:var(--tdw-ink)}\n.tdw-row-copy small{font-size:11px;color:var(--tdw-mute);line-height:1.4}\n.tdw-row-controls{display:flex;align-items:center;gap:10px;flex:none}\n.tdw-box{width:15px;height:15px;accent-color:var(--tdw-accent);cursor:pointer}\n.tdw-number{\n  width:64px;\n  height:28px;\n  padding:0 8px;\n  border-radius:6px;\n  border:1px solid var(--tdw-line-2);\n  background:transparent;\n  color:var(--tdw-ink);\n  font-size:12.5px;\n  color-scheme:light dark;\n}\n.tdw-unit{font-size:11.5px;color:var(--tdw-mute)}\n.tdw-hint{margin:8px 0 0;font-size:11px;color:var(--tdw-mute);line-height:1.5}\n.tdw-hint.is-warning{color:var(--tdw-danger)}\n\n/* ── composer entry ──────────────────────────────────────────────────── */\n\n.tdw-dock{\n  display:inline-flex;\n  align-items:center;\n  gap:5px;\n  max-width:100%;\n  padding:1px 7px;\n  border:0;\n  border-radius:var(--dsw-radius-sm,6px);\n  background:transparent;\n  color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary));\n  font:inherit;\n  font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);\n  line-height:20px;\n  white-space:nowrap;\n  cursor:pointer;\n  transition:background .12s,color .12s;\n}\n.tdw-dock:hover{background:var(--dsw-alias-interactive-bg-hover,var(--dsw-alias-bg-layer-2));color:var(--dsw-alias-label-secondary)}\n.tdw-dock:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}\n.tdw-dock b{font-weight:500;color:var(--dsw-alias-label-secondary)}\n.tdw-dock em{font-style:normal;color:var(--dsw-alias-state-error-primary)}\n.tdw-dock-mark{display:flex;flex:none}\n\n/* ── reminder notice ─────────────────────────────────────────────────── */\n\n.tdw-toast{\n  box-sizing:border-box;\n  position:fixed;\n  top:calc(var(--dsh-frame-top-clearance,0px) + 14px);\n  right:16px;\n  z-index:60;\n  width:min(360px,calc(100vw - 32px));\n  padding:14px 14px 12px;\n  pointer-events:auto;\n  color:var(--tdw-ink);\n  font:13px/1.5 var(--dsh-font-family,\"Segoe UI\",\"Microsoft YaHei\",system-ui,sans-serif);\n  background:var(--dsw-alias-bg-layer-1,var(--tdw-raised));\n  border:1px solid var(--tdw-line-2);\n  border-radius:14px;\n  box-shadow:0 22px 55px -30px color-mix(in srgb,var(--tdw-ink) 58%,transparent),0 2px 8px -4px color-mix(in srgb,var(--tdw-ink) 16%,transparent);\n  animation:tdw-in .16s ease-out;\n}\n@keyframes tdw-in{from{opacity:0;transform:translateY(-6px) scale(.99)}to{opacity:1;transform:none}}\n.tdw-toast *{box-sizing:border-box}\n.tdw-toast button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}\n\n.tdw-toast-head{display:flex;align-items:flex-start;gap:10px}\n.tdw-toast-badge{\n  display:grid;\n  place-items:center;\n  width:28px;\n  height:28px;\n  border-radius:9px;\n  background:color-mix(in srgb,var(--tdw-warn) 14%,transparent);\n  color:var(--tdw-warn);\n  flex:none;\n}\n.tdw-toast-badge.is-due{\n  background:color-mix(in srgb,var(--tdw-danger) 10%,transparent);\n  color:var(--tdw-danger);\n}\n.tdw-toast-titles{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;padding-top:1px}\n.tdw-toast-titles strong{font-size:13.5px;font-weight:600;line-height:1.35}\n.tdw-toast-titles span{font-size:11.5px;line-height:1.4;color:var(--tdw-mute)}\n.tdw-toast .tdw-toast-close{\n  display:grid;\n  place-items:center;\n  width:24px;\n  height:24px;\n  margin:-3px -3px 0 0;\n  border-radius:6px;\n  color:var(--tdw-mute);\n  flex:none;\n  transition:background .12s,color .12s;\n}\n.tdw-toast .tdw-toast-close:hover{background:var(--tdw-hover);color:var(--tdw-ink)}\n\n.tdw-toast-list{list-style:none;margin:10px 0 0;padding:0}\n.tdw-toast-list li + li{border-top:1px solid var(--tdw-line)}\n.tdw-toast .tdw-toast-row{\n  display:flex;\n  align-items:flex-start;\n  gap:10px;\n  width:100%;\n  padding:9px 8px;\n  border-radius:8px;\n  text-align:left;\n  transition:background .12s;\n}\n.tdw-toast .tdw-toast-row:hover{background:var(--tdw-hover)}\n.tdw-toast-text{flex:1;min-width:0;font-size:13px;line-height:1.5;overflow-wrap:anywhere}\n.tdw-toast-time{\n  flex:none;\n  margin-top:1px;\n  padding:1px 7px;\n  border-radius:999px;\n  font-size:10.5px;\n  line-height:16px;\n  white-space:nowrap;\n  color:var(--tdw-mute);\n  background:color-mix(in srgb,var(--tdw-mute) 10%,transparent);\n}\n.tdw-toast-time.is-overdue{\n  color:var(--tdw-danger);\n  background:color-mix(in srgb,var(--tdw-danger) 10%,transparent);\n}\n.tdw-toast-more{padding:7px 8px 0;font-size:11px;color:var(--tdw-mute)}\n\n.tdw-toast-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}\n.tdw-toast .tdw-toast-btn{\n  height:30px;\n  padding:0 13px;\n  border-radius:8px;\n  border:1px solid var(--tdw-line-2);\n  background:transparent;\n  color:var(--tdw-soft);\n  font-size:12px;\n  transition:background .12s,color .12s,border-color .12s;\n}\n.tdw-toast .tdw-toast-btn:hover{background:var(--tdw-hover);color:var(--tdw-ink)}\n.tdw-toast .tdw-toast-btn.is-primary{\n  border-color:transparent;\n  background:var(--dsw-alias-button-primary-fill,var(--tdw-accent));\n  color:var(--dsw-alias-label-primary-foreground,var(--dsw-alias-bg-base));\n}\n.tdw-toast .tdw-toast-btn.is-primary:hover{background:var(--dsw-alias-button-primary-hover,var(--tdw-accent))}\n\n@media (prefers-reduced-motion:reduce){\n  .tdw-toast{animation:none}\n}\n";
 
     const DOC_KEY = 'dsh.todo-widget.doc.v1';
     const TICK_MS = 15000;
-    const SNOOZE_MINUTES = 10;
 
     /* ── storage ───────────────────────────────────────────────────────── */
 
@@ -538,23 +637,26 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
       }
     }
 
-    /* ── formatting ────────────────────────────────────────────────────── */
-
-    function fill(text, values) {
-      return String(text ?? '').replace(/\{(\w+)\}/g, (match, key) => (key in values ? String(values[key]) : match));
-    }
-
-    function dayLabel(day, t, now) {
-      const date = parseDayKey(day);
-      if (!date) return day;
-      const sameYear = date.getFullYear() === new Date(now).getFullYear();
-      const pattern = t(sameYear ? 'dayFormat' : 'dayFormatYear');
-      return `${fill(pattern, { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() })} ${t(`weekday.${date.getDay()}`)}`;
-    }
-
-    function dayShort(epoch, t) {
-      const date = new Date(epoch);
-      return fill(t('dayFormat'), { y: date.getFullYear(), m: date.getMonth() + 1, d: date.getDate() });
+    /**
+     * Hand the text to the browser as a download. The anchor is transient and
+     * removed in the same task; nothing stays in the document.
+     */
+    function downloadText(filename, text, type) {
+      let url = null;
+      try {
+        url = window.URL.createObjectURL(new Blob([text], { type }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.rel = 'noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } catch (error) {
+        console.error('todo-widget: export failed', error);
+      } finally {
+        if (url !== null) window.setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+      }
     }
 
     /* ── icons ─────────────────────────────────────────────────────────── */
@@ -598,6 +700,10 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
     const IconBell = size => svg([
       h('path', { key: 'b', d: 'M18 8.5a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16s-2-1.5-2-6.5' }),
       h('path', { key: 'c', d: 'M10.3 19a2 2 0 0 0 3.4 0' }),
+    ], size);
+    const IconCalendar = size => svg([
+      h('rect', { key: 'r', x: 3.5, y: 5, width: 17, height: 15, rx: 2.6 }),
+      h('path', { key: 'h', d: 'M3.5 9.5h17M8 3.4v3.2M16 3.4v3.2' }),
     ], size);
 
     /* ── shared stores ─────────────────────────────────────────────────── */
@@ -704,6 +810,7 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
       const [draft, setDraft] = React.useState('');
       const [draftTime, setDraftTime] = React.useState('');
       const [editing, setEditing] = React.useState(null);
+      const [pickerOpen, setPickerOpen] = React.useState(false);
 
       React.useEffect(() => {
         const requested = focus.consume();
@@ -780,7 +887,8 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
               ? h('button', {
                 type: 'button', className: `tdw-chip${overdue ? ' is-overdue' : ''}`, title: t('changeDue'),
                 onClick: () => setEditing({ id: item.id, field: 'due' }),
-              }, IconClock(12), h('span', null, clockOf(item.dueAt)))
+              }, IconClock(12), h('span', null,
+                dayKeyOf(item.dueAt) === day ? clockOf(item.dueAt) : `${dayShort(item.dueAt, t)} ${clockOf(item.dueAt)}`))
               : h('button', {
                 type: 'button', className: 'tdw-chip is-quiet', title: t('setTime'),
                 onClick: () => setEditing({ id: item.id, field: 'due' }),
@@ -852,12 +960,40 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
           type: 'button', className: 'tdw-icon', title: t('prevDay'), 'aria-label': t('prevDay'),
           onClick: () => setPinnedDay(shiftDayKey(day, -1)),
         }, IconChevron('left', 15)),
-        h('span', { className: 'tdw-day' },
-          day === today ? `${t('today')} · ${dayLabel(day, t, now)}` : dayLabel(day, t, now)),
+        h('button', {
+          type: 'button', className: 'tdw-day', title: t('pickDate'),
+          'aria-label': `${dayLabel(day, t, now)} · ${t('pickDate')}`,
+          'aria-expanded': pickerOpen,
+          onClick: () => setPickerOpen(open => !open),
+        },
+          h('span', null, day === today ? `${t('today')} · ${dayLabel(day, t, now)}` : dayLabel(day, t, now)),
+          IconCalendar(13)),
         h('button', {
           type: 'button', className: 'tdw-icon', title: t('nextDay'), 'aria-label': t('nextDay'),
           onClick: () => setPinnedDay(shiftDayKey(day, 1)),
         }, IconChevron('right', 15)));
+
+      const datePicker = pickerOpen
+        ? h('div', { className: 'tdw-datepicker' },
+          h('input', {
+            type: 'date', className: 'tdw-dateinput', value: day, 'aria-label': t('pickDate'), autoFocus: true,
+            onChange: event => {
+              const value = event.target.value;
+              if (parseDayKey(value) !== null) setPinnedDay(value === today ? null : value);
+            },
+          }),
+          h('button', {
+            type: 'button', className: 'tdw-link',
+            onClick: () => {
+              setPinnedDay(null);
+              setPickerOpen(false);
+            },
+          }, t('backToday')),
+          h('button', {
+            type: 'button', className: 'tdw-link',
+            onClick: () => setPickerOpen(false),
+          }, t('pickerClose')))
+        : null;
 
       const carryBanner = carryCount > 0
         ? h('div', { className: 'tdw-carry' },
@@ -936,6 +1072,27 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
             }))),
         h('div', { className: 'tdw-row' },
           h('div', { className: 'tdw-row-copy' },
+            h('strong', null, t('snoozeTitle')),
+            h('small', null, t('snoozeHint'))),
+          h('div', { className: 'tdw-row-controls' },
+            h('input', {
+              type: 'number', className: 'tdw-number', min: 1, max: 1440, step: 1,
+              defaultValue: String(settings.snoozeMinutes), 'aria-label': t('snoozeTitle'),
+              onBlur: event => {
+                const parsed = Math.round(Number(event.target.value));
+                const next = Number.isFinite(parsed) ? Math.min(1440, Math.max(1, parsed)) : settings.snoozeMinutes;
+                event.target.value = String(next);
+                if (next !== settings.snoozeMinutes) {
+                  store.update(current => updateSettings(current, { snoozeMinutes: next }));
+                }
+              },
+              onKeyDown: event => {
+                if (event.key === 'Enter') event.currentTarget.blur();
+              },
+            }),
+            h('span', { className: 'tdw-unit' }, t('minutesUnit')))),
+        h('div', { className: 'tdw-row' },
+          h('div', { className: 'tdw-row-copy' },
             h('strong', null, t('showDockTitle')),
             h('small', null, t('showDockHint'))),
           h('div', { className: 'tdw-row-controls' },
@@ -943,16 +1100,38 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
               type: 'checkbox', className: 'tdw-box', checked: settings.showDock !== false,
               'aria-label': t('showDockTitle'),
               onChange: event => store.update(current => updateSettings(current, { showDock: event.target.checked })),
-            }))),
-        h('p', { className: 'tdw-hint' }, fill(t('snoozeHint'), { n: SNOOZE_MINUTES })),
+            }))));
+
+      const canExport = Object.keys(doc.days).length > 0;
+      const dataSection = h('section', { className: 'tdw-section', 'aria-labelledby': 'tdw-data-title' },
+        h('h2', { id: 'tdw-data-title', className: 'tdw-section-title' }, t('dataSection')),
+        h('div', { className: 'tdw-row' },
+          h('div', { className: 'tdw-row-copy' },
+            h('strong', null, t('exportTitle')),
+            h('small', null, t('exportHint'))),
+          h('div', { className: 'tdw-row-controls' },
+            h('button', {
+              type: 'button', className: 'tdw-btn tdw-btn-sm', disabled: !canExport,
+              onClick: () => {
+                const stamp = Date.now();
+                downloadText(`dsh-todos-${dayKeyOf(stamp)}.json`, exportJson(doc, stamp), 'application/json');
+              },
+            }, t('exportJson')),
+            h('button', {
+              type: 'button', className: 'tdw-btn tdw-btn-sm', disabled: !canExport,
+              onClick: () => {
+                const stamp = Date.now();
+                downloadText(`dsh-todos-${dayKeyOf(stamp)}.md`, exportMarkdown(doc, stamp, t), 'text/markdown');
+              },
+            }, t('exportMarkdown')))),
         h('p', { className: `tdw-hint${store.writable() ? '' : ' is-warning'}` },
           store.writable() ? t('storageHint') : t('storageWarning')));
 
       return h('section', { className: 'tdw-page', 'aria-label': t('title') },
         h('div', { className: 'tdw-page-inner' },
           head,
-          h('div', { className: 'tdw-board' }, daybar, carryBanner, addForm, draftRow, list, boardFoot),
-          settingsSection));
+          h('div', { className: 'tdw-board' }, daybar, datePicker, carryBanner, addForm, draftRow, list, boardFoot),
+          h('div', { className: 'tdw-panels' }, settingsSection, dataSection)));
     }
 
     /* ── composer entry ────────────────────────────────────────────────── */
@@ -984,12 +1163,13 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
 
       const rows = kind === 'due' ? reminder.due.slice(0, 4) : unfinishedRecent(doc, reminder.today, 4);
       const more = kind === 'due' ? reminder.due.length - rows.length : 0;
+      const minutes = doc.settings.snoozeMinutes;
       // An evening due notice and the daily sweep describe the same unfinished
       // work, so acknowledging the notice also settles the sweep. An earlier
       // due notice must not consume a sweep that has not happened yet.
       const scope = kind === 'wrap' ? 'wrapUp' : reminder.wrapUp ? 'all' : 'due';
       const dismiss = () => store.update(current => acknowledgeReminder(current, reminder, Date.now(), scope));
-      const snooze = () => store.update(current => snoozeReminder(current, reminder, Date.now(), SNOOZE_MINUTES * 60000));
+      const snooze = () => store.update(current => snoozeReminder(current, reminder, Date.now(), minutes * 60000));
 
       return h('section', {
         className: 'tdw-toast', role: 'alertdialog', 'aria-label': t('reminderTitle'),
@@ -998,32 +1178,38 @@ function snoozeReminder(doc, reminder, now, duration = SNOOZE_MS) {
         },
       },
         h('header', { className: 'tdw-toast-head' },
-          h('span', { className: 'tdw-toast-badge' }, IconBell(14)),
+          h('span', { className: `tdw-toast-badge${kind === 'due' ? ' is-due' : ''}` }, IconBell(15)),
           h('div', { className: 'tdw-toast-titles' },
             h('strong', null, kind === 'due' ? t('dueTitle') : t('wrapTitle')),
             h('span', null, kind === 'due'
               ? fill(t('dueNote'), { n: reminder.due.length })
               : fill(t('wrapNote'), { n: reminder.unfinished }))),
           h('button', {
-            type: 'button', className: 'tdw-icon', title: t('dismiss'), 'aria-label': t('dismiss'),
+            type: 'button', className: 'tdw-toast-close', title: t('dismiss'), 'aria-label': t('dismiss'),
             onClick: dismiss,
           }, IconClose(14))),
         h('ul', { className: 'tdw-toast-list' },
-          rows.map(({ day: rowDay, item }) => h('li', { key: `${rowDay}:${item.id}` },
-            h('button', {
-              type: 'button', className: 'tdw-toast-row',
-              onClick: () => openPanel(rowDay),
-            },
-              h('span', { className: 'tdw-toast-text' }, item.text),
-              h('span', { className: `tdw-toast-time${isOverdue(item, now) ? ' is-overdue' : ''}` },
-                rowDay === reminder.today
-                  ? (item.dueAt !== null ? clockOf(item.dueAt) : '')
-                  : dayLabel(rowDay, t, now))))),
+          rows.map(({ day: rowDay, item }) => {
+            const stamp = item.dueAt === null
+              ? (rowDay === reminder.today ? '' : dayShort(parseDayKey(rowDay).getTime(), t))
+              : dayKeyOf(item.dueAt) === reminder.today
+                ? clockOf(item.dueAt)
+                : `${dayShort(item.dueAt, t)} ${clockOf(item.dueAt)}`;
+            return h('li', { key: `${rowDay}:${item.id}` },
+              h('button', {
+                type: 'button', className: 'tdw-toast-row',
+                onClick: () => openPanel(rowDay),
+              },
+                h('span', { className: 'tdw-toast-text' }, item.text),
+                stamp === ''
+                  ? null
+                  : h('span', { className: `tdw-toast-time${isOverdue(item, now) ? ' is-overdue' : ''}` }, stamp)));
+          }),
           more > 0 ? h('li', { className: 'tdw-toast-more' }, fill(t('more'), { n: more })) : null),
         h('div', { className: 'tdw-toast-actions' },
-          h('button', { type: 'button', className: 'tdw-btn', onClick: dismiss }, t('dismiss')),
-          h('button', { type: 'button', className: 'tdw-btn is-primary', onClick: snooze },
-            fill(t('snooze'), { n: SNOOZE_MINUTES }))));
+          h('button', { type: 'button', className: 'tdw-toast-btn', onClick: dismiss }, t('dismiss')),
+          h('button', { type: 'button', className: 'tdw-toast-btn is-primary', onClick: snooze },
+            fill(t('snooze'), { n: minutes }))));
     }
 
     function TodoPanelIcon({ size }) {

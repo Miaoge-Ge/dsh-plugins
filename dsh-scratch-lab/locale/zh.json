@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "title": "试验区",
+    "description": "把 ~/.dsh/lab 变成随开随用的临时工作区：侧栏整页输入名字即可新建 Demo 会话。"
+  },
+  "ui": {
+    "title": "试验区",
+    "subtitle": "临时 Demo 会话，共用一个工作区目录",
+    "pathLabel": "目录",
+    "nameLabel": "Demo 名称",
+    "namePlaceholder": "例如：登录页原型（留空用时间命名）",
+    "create": "新建并打开",
+    "creating": "正在创建…",
+    "sessions": "Demo 会话",
+    "sessionCount": "{n} 个会话",
+    "empty": "还没有 Demo",
+    "emptyHint": "输入名字，创建第一个临时会话",
+    "unstarted": "未开始",
+    "running": "运行中",
+    "updatedAt": "更新于 {time}",
+    "open": "打开会话",
+    "loading": "正在准备试验区…",
+    "unavailable": "试验区工作区未就绪",
+    "unavailableHint": "目标路径：{path}。确认插件已加载；刚安装时请重启 Harness。",
+    "prepareHint": "插件会在启动时创建并注册这个工作区；如果一直未就绪，请检查目录权限。",
+    "renamedFailed": "会话已创建，但自动命名失败；可在侧栏重命名。",
+    "createFailed": "创建失败：{message}"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "title": "Scratch lab",
+    "description": "Turns ~/.dsh/lab into a ready-to-use temporary workspace: name a demo on the sidebar page and open its Session."
+  },
+  "ui": {
+    "title": "Scratch lab",
+    "subtitle": "Temporary demo Sessions sharing one workspace directory",
+    "pathLabel": "Directory",
+    "nameLabel": "Demo name",
+    "namePlaceholder": "e.g. Login page prototype (blank uses a timestamp)",
+    "create": "Create & open",
+    "creating": "Creating…",
+    "sessions": "Demo Sessions",
+    "sessionCount": "{n} Sessions",
+    "empty": "No demos yet",
+    "emptyHint": "Type a name to create the first temporary Session",
+    "unstarted": "Not started",
+    "running": "Running",
+    "updatedAt": "Updated {time}",
+    "open": "Open Session",
+    "loading": "Preparing the scratch lab…",
+    "unavailable": "The scratch Workspace is not ready",
+    "unavailableHint": "Target path: {path}. Make sure the plugin is loaded; restart Harness after installing.",
+    "prepareHint": "The plugin creates and registers this Workspace at startup; if it stays unavailable, check the directory permissions.",
+    "renamedFailed": "The Session was created, but automatic naming failed; rename it from the sidebar.",
+    "createFailed": "Creation failed: {message}"
+  }
+}

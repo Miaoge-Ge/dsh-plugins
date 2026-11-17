@@ -6,20 +6,21 @@
 
 - **范围化主数字**：今日 / 月度 / 全部 / 本会话共用一处主数字，切换范围即切换口径；月度可选历史月份。
 - **账户余额**：通过 Harness 原生、已鉴权的账户接口读取当前登录账户的充值和赠送余额，桌面版与 Web 版使用同一通道；插件不接触 API Key。
-- **模型明细**：按 provider 与 model 分组，默认显示调用次数、tokens、费用与费用占比；展开后显示未缓存输入、缓存读取、缓存写入、输出四类 tokens 及各自金额。
+- **厂商余额**：在输入框执行 `/provider-balance`，按厂商查询 API 余额或套餐额度。DeepSeek、MIMO 使用官方余额接口；GLM、MiniMax 查询套餐额度（接口未公开，失败不显示为 0）；Qwen、腾讯混元提示所需额外凭据。
+- **模型明细**：按 provider 与 model 分组，默认显示调用次数、tokens、费用、费用占比、TPS 与缓存命中率；展开后显示未缓存输入、缓存读取、缓存写入、输出四类 tokens 及各自金额。TPS 为输出 tokens / 步骤耗时（含首 token 等待），仅对带 `step/start` 时序的记录显示。
 - **网页检索计费**：`web_search` / `web_fetch` 按 5 元 / 1000 次成功请求计入（每次 ¥0.005），失败与取消的调用不计。
 - **趋势图**：今日显示 24 小时分布；月度按日历逐日（本月截至今天）；全部与本会话按连续日期补零呈现最近 60 天，避免稀疏使用日被画成相邻柱。单日范围自动切换为分时，图表下可展开逐时 / 逐日明细表。
 - **会话计费浮层**：输入框下的费用入口点击后在原位展开小浮层，按未缓存输入、缓存读取、输出与网页检索列出本会话费用（有缓存写入时追加该行），并附今日消费、账户余额、缓存命中与调用次数；点击外部或按 Esc 收起，不打断对话。字号对齐宿主原生用量浮窗，不显示没有意义的空缓存写入行。
 - **缓存命中率**：缓存读取 / 全部输入 tokens。
 - **CSV 导出**：导出当前范围的模型汇总，包含调用次数、token 分类、金额、待计价及不完整调用数。
-- **自定义模型单价**：折叠区内填写其他厂商模型的人民币单价，原生设置持久化。
+- **模型单价**：设置页新增可视化「模型单价」区，按行添加/删除第三方模型，填写 provider/model 与输入、缓存读取、缓存写入、输出四项单价；每个模型默认折叠成一行，点击展开编辑，新增模型自动展开；缓存写入留空时按输入价，已见模型提供补全，原生设置持久化。
 - 每分钟自动刷新，也可手动刷新；内存缓存只保留计量元数据，后续读取仅补充新增日志页。
 
 入口：**账号菜单 → 设置 → 用量计费**，或点击输入框下方的消费金额展开计费浮层。
 
 ## 安装与开发
 
-需要 DeepSeek Harness 0.2.2-rc.2 或兼容版本、Node.js 20+。账户接口携带的客户端版本取自运行中的 Harness，升级后无需重新打包插件。
+需要 DeepSeek Harness 0.2.2-rc.2 或更高版本、Node.js 20+；当前在 0.2.2-rc.3 上验证。账户接口携带的客户端版本取自运行中的 Harness，升级后无需重新打包插件。
 
 ```powershell
 # 在合集仓库根目录执行
@@ -43,7 +44,7 @@ dsh plugin --profile desktop add "C:\path\dsh-plugins\dsh-session-cost"
 | DeepSeek Flash | 0.04 | 2 | 8 |
 | DeepSeek V4 Pro | 0.30 | 9 | 27 |
 
-空闲时段半价。北京时间周一至周五 09:00–12:00、14:00–18:00 为高峰，周末及节假日为空闲。内置 2026 年放假日期，其他年份仅识别周末，需更新节假日表。Flash 旧别名映射到官方 Flash 价格；仅对 `deepseek`、`deepseek-account`、`deepseek-official` 路由默认计价。
+空闲时段半价。北京时间周一至周五 09:00–12:00、14:00–18:00 为高峰，周末及节假日为空闲。内置 2026 年放假日期，其他年份仅识别周末，需更新节假日表。Flash 旧别名（含 `deepseek-v4.1-flash`、`deepseek-v4.1-flash-1017`）映射到官方 Flash 价格；仅对 `deepseek`、`deepseek-account`、`deepseek-official` 路由默认计价。
 
 价格来源：[DeepSeek 官方模型价格](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)。2026 年节假日来源：[国务院办公厅通知](https://www.beijing.gov.cn/cs/gncs/zcwj/202603/t20260327_4568275.html)。历史记录也按上述价格快照回算，无法还原历次调价。
 
@@ -51,26 +52,47 @@ dsh plugin --profile desktop add "C:\path\dsh-plugins\dsh-session-cost"
 
 ### 自定义价格
 
-在页面底部展开“自定义模型单价”，填写 `provider/model` 对应的四项单价。例如下面只是格式示例，需填入实际单价：
+在设置页的「模型单价」区点击「添加模型」，填写 `provider/model` 与四项单价即可；缓存写入留空按输入价，缓存读取留空按 0。每个模型默认折叠成一行，点击行首展开修改；新增模型自动展开。保存后对全部历史重新计价，点「清空自定义」恢复只使用内置 DeepSeek 价格。
 
-```json
-{
-  "your-provider/your-model": {
-    "input": 1,
-    "cacheRead": 0.1,
-    "cacheWrite": 1,
-    "output": 2
-  }
-}
+内置以下第三方默认单价（元 / 百万 tokens，缓存写入暂按输入价）：
+
+| provider / model | 输入 | 缓存读取 | 缓存写入 | 输出 |
+| --- | ---: | ---: | ---: | ---: |
+| `qwen/qwen3.8-flash` | 0.8 | 0.1 | 0.8 | 2.7 |
+| `glm/glm5.3-flash` | 0.8 | 0.23 | 0.8 | 2.8 |
+| `xiaomi/mimo-v2.6-pro` | 3 | 0.025 | 3 | 6 |
+| `xiaomi/mimo-v2.6-flash` | 1 | 0.02 | 1 | 2 |
+| `minimax/MiniMax-M3.1-Flash` | 1 | 0.1 | 1 | 4 |
+
+这些键以实际配置的 provider id 为准；例如 GLM 或 MiniMax 若使用其他 provider 名称，在界面里改键即可。DeepSeek 模型使用内置峰谷价，不需要在自定义单价里重复添加；自定义价格不乘峰谷系数。原生设置服务负责持久化，写入失败会明确提示。
+
+### 厂商余额查询
+
+在输入框执行 `/provider-balance`，或在命令后加厂商 id 只查一家：
+
+```text
+/provider-balance
+/provider-balance mimo
 ```
 
-单位统一为人民币 / 百万 tokens，自定义价格不再乘峰谷系数；保存后对全部历史重新计价。输入 `{}` 可恢复内置价格。原生设置服务负责持久化，写入失败会明确提示。
+查询使用 Harness 凭据服务解析 API Key，不把密钥写入日志或界面。支持情况：
+
+| 厂商 | 接口 | 说明 |
+| --- | --- | --- |
+| DeepSeek | `GET https://api.deepseek.com/user/balance` | 需要 `DEEPSEEK_API_KEY`；面板顶部另有登录账户余额 |
+| MIMO | `GET https://api.xiaomimimo.com/v1/platform/balance` | 需要 `XIAOMI_API_KEY`，返回现金/赠送余额 |
+| GLM | `GET https://open.bigmodel.cn/api/monitor/usage/quota/limit` | Coding Plan 套餐额度，非现金余额；接口未公开，可能变动 |
+| MiniMax | `GET https://api.minimax.io/v1/token_plan/remains` | Token Plan 额度，非现金余额；普通 PAYG 无此接口 |
+| Qwen | — | `QWEN_API_KEY` 没有余额接口，需 qianwen CLI OAuth 或控制台 |
+| 腾讯混元 | — | 需腾讯云 SecretId/SecretKey 调用财务 API，当前未配置 |
+
+查询失败会明确显示原因，不会把失败当成 0。
 
 ## 界面
 
 - 一个主面板承载当前范围的主数字与趋势图；模型明细使用细分隔线而非独立卡片，信息密度集中在数字上。
 - 范围切换为下划线标签；金额、占比与 tokens 使用等宽数字，颜色只取自当前主题的语义令牌。
-- 模型行默认收起，展开后显示四类 token 与金额；图表明细、计价规则和自定义单价同样按需展开。
+- 模型行默认收起，展开后显示四类 token 与金额；每行还显示 TPS 与缓存命中率。图表明细与计价规则按需展开，模型单价为可见的卡片式编辑区且每个模型默认折叠成一行。
 - 设置页承载完整仪表盘；输入框下的入口打开锚定在触发按钮上方的小浮层，按视口自动定位与夹取，不遮挡对话。
 - 小浮层点击外部、按 Esc 或切换会话时收起；关闭后恢复触发按钮焦点，布局在 640px 与 460px 两个断点收紧。
 

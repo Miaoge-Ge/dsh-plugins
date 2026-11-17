@@ -6,7 +6,8 @@
   "description": "Floating daily to-do window for DeepSeek Harness: per-day lists, completion times, hide-to-bubble, and reminders for unfinished items.",
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "dsh": ">=0.2.2-rc.2"
   },
   "exports": {
     ".": "./index.js",

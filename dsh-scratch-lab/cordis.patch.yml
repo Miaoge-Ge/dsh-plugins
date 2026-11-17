@@ -1,0 +1,4 @@
+- insert:
+    - id: scratch-lab
+      name: '@local/scratch-lab'
+      config: {}
