@@ -678,6 +678,18 @@ function normalizeBalance(result) {
           h('span',{className:'dsc-rate-msg',role:'status'},message)));
     }
 
+    function useFormSnapshot(form) {
+      const [snapshot, setSnapshot] = React.useState(() => form?.getSnapshot());
+      React.useEffect(() => {
+        if (!form) return undefined;
+        const update = () => setSnapshot(form.getSnapshot());
+        update();
+        const dispose = form.subscribe(update);
+        return typeof dispose === 'function' ? dispose : undefined;
+      }, [form]);
+      return snapshot;
+    }
+
     function parseBalances(raw) {
       try {
         const data = JSON.parse(raw ?? '{}');
@@ -686,8 +698,8 @@ function normalizeBalance(result) {
     }
 
     function BalancePanel({rateForm}) {
-      const config = React.useSyncExternalStore(rateForm.subscribe, rateForm.getSnapshot, rateForm.getSnapshot);
-      const data = parseBalances(config.value?.balances);
+      const config = useFormSnapshot(rateForm);
+      const data = parseBalances(config?.value?.balances);
       const rows = data?.providers ?? [];
       return h('section', {className: 'dsc-balances', 'aria-label': '厂商余额'},
         h('div', {className: 'dsc-section'},
